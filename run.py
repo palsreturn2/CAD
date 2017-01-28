@@ -9,6 +9,7 @@ from sklearn.cluster import KMeans
 from PIL import Image
 import matplotlib.pyplot as plt
 import dcapnet as DCAP
+import mlp as MLP
 import scipy.ndimage
 import scipy.misc
 import sys
