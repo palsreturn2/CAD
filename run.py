@@ -9,7 +9,7 @@ from sklearn.cluster import KMeans
 from PIL import Image
 import matplotlib.pyplot as plt
 import dcapnet as DCAP
-import mlp as MLP
+import mlpca as MLP
 import scipy.ndimage
 import scipy.misc
 import sys
@@ -19,7 +19,8 @@ import metrics
 def classify(R,V,Bt,Btnxt):
 	shp=R.shape
 	print 'Segmentation started'
-	P=DCAP.predict(V)
+	#P=DCAP.predict(V)
+	P = MLP.predict(V[:,0:9],V[:,9:36])
 	print 'Segmentation complete'	
 	C=np.zeros((shp[1],shp[2]))
 	k=0
@@ -102,7 +103,11 @@ def run(R,Bt,Btnxt, generate = False):
 		print 'Window size has to be 3X3'
 		return
 	
-	DCAP.fit(trX, trY, B, epoch = 20, batch_size = 1000, early_stop=True)
+	#DCAP.fit(trX, trY, B, epoch = 20, batch_size = 1000, early_stop=True)
+	trX = trX.reshape([trX.shape[0],36])
+	V = V.reshape([V.shape[0],36])
+	
+	MLP.fit(trX,trY,B,epoch =50, batch_size = 1000, early_stop=True)
 	
 	classify(R,V,Bt,Btnxt)
 

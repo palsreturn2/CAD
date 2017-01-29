@@ -24,7 +24,7 @@ def mse(X,Y):
 def logloss(X,Y):
 	return -T.mean(Y*T.log(X)+(1-Y)*T.log(1-X))
 
-def dropout_from_layer(layer, p):    
+def dropout_from_layer(layer, p=0.5):    
 	rng = np.random.RandomState(1000)
 	srng = theano.tensor.shared_randomstreams.RandomStreams(rng.randint(999999))
 	
@@ -33,33 +33,37 @@ def dropout_from_layer(layer, p):
 	output = layer * T.cast(mask, theano.config.floatX)
 	return output
 	
-def model(X,w1,w2,w3,w4):
-	layer1 = T.tanh(T.dot(X,w1))
+def model(X,R,w11,w12,w2,w3,w4):
+	layer11 = dropout_from_layer(T.tanh(T.dot(X,w11)),p=0.8)
+	layer12 = T.tanh(T.dot(R,w12))
+	layer1 = T.concatenate([layer11,layer12],axis=1)
 	layer2 = T.tanh(T.dot(layer1, w2))
 	layer3 = T.tanh(T.dot(layer2, w3))
 	py = T.dot(layer3,w4)
 	return layer1,layer2,layer3,py
-
+	
 X = T.dmatrix()
+R = T.dmatrix()
 Y = T.dvector()
 B = T.dvector()
 
-w1 = init_weights((36,20))
+w11 = init_weights((9,10))
+w12 = init_weights((27,10))
 w2 = init_weights((20,10))
 w3 = init_weights((10,5))
 w4 = init_weights((5,1))
 
-params = [w1,w2,w3,w4]
+params = [w11,w12,w2,w3,w4]
 
-reg_param = 10
+reg_param = 0.00010
 
-l1,l2,l3,py_x = model(X,w1,w2,w3,w4)
+l1,l2,l3,py_x = model(X,R,w11,w12,w2,w3,w4)
 
-cost = mse(py_x.T,Y) + reg_param * T.mean(T.dot(Y,B))
+cost = mse(py_x.T,Y) + reg_param * (T.sum(w11**2)+T.sum(w2**2))
 
-updates = Training.sgdm(cost,params,lr=4,alpha=0.9)
-train = theano.function(inputs = [X,Y,B], updates = updates, outputs = cost, allow_input_downcast = True)
-predict = theano.function(inputs = [X], outputs = py_x, allow_input_downcast = True)
+updates = Training.sgdm(cost,params,lr=3,alpha=0.4)
+train = theano.function(inputs = [X,R,Y], updates = updates, outputs = cost, allow_input_downcast = True)
+predict = theano.function(inputs = [X,R], outputs = py_x, allow_input_downcast = True)
 
 def fit(trX, trY, B, epoch = 10, batch_size = 1000, early_stop=False, epsilon=0.00001):
 	trX = np.array(trX)
@@ -72,9 +76,14 @@ def fit(trX, trY, B, epoch = 10, batch_size = 1000, early_stop=False, epsilon=0.
 			batch_xs = trX[j:min(j+batch_size,trX.shape[0])]
 			batch_ys = trY[j:min(j+batch_size,trX.shape[0])]
 			batch_B = B[j:min(j+batch_size,trX.shape[0])]
-			if(np.random.randint(low = 0, high=100)%13==0):
-				train(batch_xs, batch_ys, batch_B)
-		prX = predict(trX)
-		print 'Epoch Loss: ', sklearn.metrics.mean_squared_error(prX,trY)		
+			
+			if(np.mean(batch_B-batch_ys)<0 or np.random.randint(low = 0, high=100)%13==0):
+				train(batch_xs[:,0:9], batch_xs[:,9:36], batch_ys)
+		prX = predict(trX[:,0:9],trX[:,9:36])
+		eloss = sklearn.metrics.mean_squared_error(prX,trY)
+		print 'Epoch Loss: ', eloss
+		if(eloss<0.007):
+			break		
 	print 'Training ended'
 	return
+
