@@ -18,3 +18,12 @@ def sgdm(cost,params,lr=0.01,alpha=0.9):
 		updates.append([p,p-(lr*param_updates)])
 		updates.append([param_updates,alpha*param_updates+(1-alpha)*g])
 	return updates
+
+def adagrad(cost,params,lr=0.01):
+	gradients = T.grad(cost,params)
+	updates = []
+	for p,g in zip(params,gradients):
+		param_updates = theano.shared(0.,broadcastable=p.broadcastable)
+		updates.append([p,p-(lr*g/T.sqrt(param_updates))])
+		updates.append([param_updates,param_updates+g*g])
+	return updates

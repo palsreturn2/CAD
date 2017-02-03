@@ -51,13 +51,13 @@ w4 = init_weights((5,1))
 
 params = [w1,w2,w3,w4]
 
-reg_param = 10
+reg_param = 0
 
 l1,l2,l3,py_x = model(X,w1,w2,w3,w4)
 
 cost = mse(py_x.T,Y) + reg_param * T.mean(T.dot(Y,B))
 
-updates = Training.sgdm(cost,params,lr=4,alpha=0.9)
+updates = Training.sgdm(cost,params,lr=3,alpha=0.4)
 train = theano.function(inputs = [X,Y,B], updates = updates, outputs = cost, allow_input_downcast = True)
 predict = theano.function(inputs = [X], outputs = py_x, allow_input_downcast = True)
 

@@ -14,13 +14,15 @@ import scipy.ndimage
 import scipy.misc
 import sys
 import metrics
+from sklearn.linear_model import SGDRegressor
+from sklearn.svm import SVR
 
-
-def classify(R,V,Bt,Btnxt):
+def classify(R,V,Bt,Btnxt,model):
 	shp=R.shape
 	print 'Segmentation started'
-	#P=DCAP.predict(V)
-	P = MLP.predict(V[:,0:9],V[:,9:36])
+	#P=MLP.predict(V)
+	P = MLP.predict(V[:,27:36],V[:,0:27])
+	#P = model.predict(V)
 	print 'Segmentation complete'	
 	C=np.zeros((shp[1],shp[2]))
 	k=0
@@ -33,6 +35,7 @@ def classify(R,V,Bt,Btnxt):
 	plt.imshow(np.transpose(C))
 	plt.show()
 	C = np.asarray(C>0,dtype = np.int32)
+
 	Btd = np.asarray(Bt>0,dtype = np.int32)
 	Btnxtd = np.asarray(Btnxt>0,dtype = np.int32)
 	print metrics.change_metric(R,Btd,Btnxtd,C)
@@ -73,7 +76,7 @@ def viz_layer2(R,V):
 		plt.show()
 	
 
-def run(R,Bt,Btnxt, generate = False):
+def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
 	wx=3
 	wy=3
 	shp=R.shape
@@ -107,28 +110,42 @@ def run(R,Bt,Btnxt, generate = False):
 	trX = trX.reshape([trX.shape[0],36])
 	V = V.reshape([V.shape[0],36])
 	
-	MLP.fit(trX,trY,B,epoch =50, batch_size = 1000, early_stop=True)
+	#model = SVR()
+	#model.fit(trX,trY)
+	MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.012)
 	
-	classify(R,V,Bt,Btnxt)
+	classify(R,V,Bt,Btnxt,None)
+	exit()
+	V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
+	classify(R,V,Bt,Btnxt,None)
+	
 
 if __name__ == "__main__":
 	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
 	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/mumbai/'
 	
-	R = INPUT.give_raster(raw_loc + '1999.tif')
-	Bt = INPUT.give_raster(label_loc + 'cimg2000.tif')[0]
-	Btnxt = INPUT.give_raster(label_loc + 'cimg2010.tif')[0]
+	R = INPUT.give_raster(raw_loc + '1990.tif')
+	Bt = INPUT.give_raster(label_loc + 'cimg1996.tif')[0]
+	Btnxt = INPUT.give_raster(label_loc + 'cimg2000.tif')[0]
+	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2010.tif')[0]
+	
 	
 	'''R = R[:,286:783,345:802]
 	Bt = Bt[286:783,345:802]
-	Btnxt = Btnxt[286:783,345:802]'''
+	Btnxt = Btnxt[286:783,345:802]
+	Btnxtnxt = Btnxtnxt[286:783,345:802]'''
 	
 	Bt = Bt/255
 	Btnxt = Btnxt/255
+	Btnxtnxt = Btnxtnxt/255
 	
-	Bt,Btnxt = DATASET.ageBuiltUp(R,Bt,Btnxt,0.1)
 	
-	run(R,Bt,Btnxt,generate = False)
+	Bt,Btnxt = DATASET.ageBuiltUp(R,Bt,Btnxt,0.1,first = True)
+	
+	Btnxt,Btnxtnxt = DATASET.ageBuiltUp(R,Btnxt,Btnxtnxt,0.1,first=False)
+	
+	
+	run(R,Bt,Btnxt,Btnxtnxt,generate = False)
 	
 	
 	
