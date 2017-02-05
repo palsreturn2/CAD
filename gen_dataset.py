@@ -48,10 +48,14 @@ def ageBuiltUp(R, Bt, Btnxt, age, first = True):
 def create_test_dataset(R,Bt,Btnxt):
 	V=[]
 	shp = R.shape
+	Rn = R/(np.max(np.ndarray.flatten(R)))
+	for i in range(0,shp[0]):
+		Rn[i] = Rn[i] - np.mean(np.ndarray.flatten(Rn[i]))
+	Rn=np.concatenate([Rn,Bt.reshape((1,shp[1],shp[2]))])
 	for i in range(0,shp[1]):
 		for j in range(0,shp[2]):
 			if(R[0][i][j]!=0):
-				x=INPUT.create_window(Rn,i,j,wx,wy)					
+				x=INPUT.create_window(Rn,i,j,3,3)					
 				V.append(x)
 	return np.array(V)
 

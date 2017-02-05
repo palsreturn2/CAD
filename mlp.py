@@ -44,10 +44,10 @@ X = T.dmatrix()
 Y = T.dvector()
 B = T.dvector()
 
-w1 = init_weights((36,20))
-w2 = init_weights((20,10))
-w3 = init_weights((10,5))
-w4 = init_weights((5,1))
+w1 = init_weights((36,40))
+w2 = init_weights((40,20))
+w3 = init_weights((20,10))
+w4 = init_weights((10,1))
 
 params = [w1,w2,w3,w4]
 
@@ -75,6 +75,9 @@ def fit(trX, trY, B, epoch = 10, batch_size = 1000, early_stop=False, epsilon=0.
 			if(np.random.randint(low = 0, high=100)%13==0):
 				train(batch_xs, batch_ys, batch_B)
 		prX = predict(trX)
-		print 'Epoch Loss: ', sklearn.metrics.mean_squared_error(prX,trY)		
+		eloss = sklearn.metrics.mean_squared_error(prX,trY)	
+		print 'Epoch Loss: ', eloss
+		if(early_stop and eloss<epsilon):
+			break		
 	print 'Training ended'
 	return

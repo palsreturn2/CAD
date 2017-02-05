@@ -34,10 +34,10 @@ def dropout_from_layer(layer, p=0.5):
 	return output
 	
 def model(X,R,w11,w12,w13,w2,w3,w4):
-	layer11 = dropout_from_layer(T.tanh(T.dot(X,w11)), p=0.2)
+	layer11 = dropout_from_layer(T.tanh(T.dot(X,w11)),p=0.2)
 	layer12 = T.tanh(T.dot(R,w12))
-	layer13 = T.tanh(T.dot(layer12,w13))
-	layer1 = T.concatenate([layer11,layer13],axis=1)
+	layer13 = dropout_from_layer(T.tanh(T.dot(layer11,w13)),p=0.2)
+	layer1 = T.concatenate([layer12,layer13],axis=1)
 	layer2 = T.tanh(T.dot(layer1, w2))
 	layer3 = T.tanh(T.dot(layer2, w3))
 	py = T.dot(layer3,w4)
@@ -48,20 +48,20 @@ R = T.dmatrix()
 Y = T.dvector()
 B = T.dvector()
 
-w11 = init_weights((9,3))
-w12 = init_weights((27,22))
-w13 = init_weights((22,17))
-w2 = init_weights((20,10))
-w3 = init_weights((10,5))
-w4 = init_weights((5,1))
+w11 = init_weights((9,20))
+w12 = init_weights((27,20))
+w13 = init_weights((20,20))
+w2 = init_weights((40,30))
+w3 = init_weights((30,10))
+w4 = init_weights((10,1))
 
 params = [w11,w12,w13,w2,w3,w4]
 
-reg_param = 0
+reg_param = 0.1
 
 l1,l2,l3,py_x = model(X,R,w11,w12,w13,w2,w3,w4)
 
-cost = mse(py_x.T,Y) + reg_param * (T.sum(w11**2)+T.sum(w2**2)+T.sum(w3**2)+T.sum(w4**2))
+cost = mse(py_x.T,Y) + reg_param * (T.sum(w11**2))
 
 updates = Training.sgdm(cost,params,lr=4,alpha=0.4)
 train = theano.function(inputs = [X,R,Y], updates = updates, outputs = cost, allow_input_downcast = True)

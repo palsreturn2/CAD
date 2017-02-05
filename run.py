@@ -9,20 +9,22 @@ from sklearn.cluster import KMeans
 from PIL import Image
 import matplotlib.pyplot as plt
 import dcapnet as DCAP
-import mlpca as MLP
+import mlp as MLP
 import scipy.ndimage
 import scipy.misc
 import sys
 import metrics
 from sklearn.linear_model import SGDRegressor
 from sklearn.svm import SVR
+import method1 as METHOD
 
 def classify(R,V,Bt,Btnxt,model):
 	shp=R.shape
 	print 'Segmentation started'
-	#P=MLP.predict(V)
-	P = MLP.predict(V[:,27:36],V[:,0:27])
+	P=MLP.predict(V)
+	#P = MLP.predict(V[:,27:36],V[:,0:27])
 	#P = model.predict(V)
+	#P = METHOD.method_predict(model,V)
 	print 'Segmentation complete'	
 	C=np.zeros((shp[1],shp[2]))
 	k=0
@@ -31,17 +33,14 @@ def classify(R,V,Bt,Btnxt,model):
 			if(R[0][i][j]>0):
 				C[i][j] = P[k]
 				k=k+1
-	
-	plt.imshow(np.transpose(C))
-	plt.show()
+	np.save('Classified.npy',np.transpose(C))
+	#plt.imshow(np.transpose(C))
+	#plt.show()
 	C = np.asarray(C>0,dtype = np.int32)
 
 	Btd = np.asarray(Bt>0,dtype = np.int32)
 	Btnxtd = np.asarray(Btnxt>0,dtype = np.int32)
 	print metrics.change_metric(R,Btd,Btnxtd,C)
-	C=np.transpose(C)
-	np.save('Classified.npy',C)
-	
 
 def viz_layer1(R,V):
 	shp = R.shape
@@ -110,13 +109,14 @@ def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
 	trX = trX.reshape([trX.shape[0],36])
 	V = V.reshape([V.shape[0],36])
 	
-	#model = SVR()
+	#model = SGDRegressor()
 	#model.fit(trX,trY)
-	MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.012)
+	MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
+	#model = METHOD.method_fit(trX,trY,B)
 	
 	classify(R,V,Bt,Btnxt,None)
-	exit()
 	V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
+	V = V.reshape([-1,36])
 	classify(R,V,Bt,Btnxt,None)
 	
 
