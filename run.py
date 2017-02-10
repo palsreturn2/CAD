@@ -17,13 +17,16 @@ import metrics
 from sklearn.linear_model import SGDRegressor
 from sklearn.svm import SVR
 import method1 as METHOD
+import time
 
 def classify(R,V,Bt,Btnxt,model):
 	shp=R.shape
 	print 'Segmentation started'
-	P=MLP.predict(V)
+	#P=MLP.predict(V)
 	#P = MLP.predict(V[:,27:36],V[:,0:27])
-	#P = model.predict(V)
+	start = time.time()
+	P = model.predict(V)
+	print time.time()-start
 	#P = METHOD.method_predict(model,V)
 	print 'Segmentation complete'	
 	C=np.zeros((shp[1],shp[2]))
@@ -111,13 +114,13 @@ def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
 	
 	#model = SGDRegressor()
 	#model.fit(trX,trY)
-	MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
-	#model = METHOD.method_fit(trX,trY,B)
+	#MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
+	model = METHOD.method_fit(trX,trY,B)
 	
-	classify(R,V,Bt,Btnxt,None)
+	classify(R,V,Bt,Btnxt,model)
 	V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
 	V = V.reshape([-1,36])
-	classify(R,V,Bt,Btnxt,None)
+	classify(R,V,Bt,Btnxt,model)
 	
 
 if __name__ == "__main__":
