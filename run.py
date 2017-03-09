@@ -8,6 +8,8 @@ from os import listdir
 from sklearn.cluster import KMeans
 from PIL import Image
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib import colors
 import dcapnet as DCAP
 import mlp as MLP
 import scipy.ndimage
@@ -36,14 +38,26 @@ def classify(R,V,Bt,Btnxt,model):
 			if(R[0][i][j]>0):
 				C[i][j] = P[k]
 				k=k+1
-	np.save('Classified.npy',np.transpose(C))
-	#plt.imshow(np.transpose(C))
-	#plt.show()
+	np.save('Classified.npy',C)
+	
+	fig, ax = plt.subplots()
+	cmap = colors.ListedColormap(['white', 'red', 'blue'])	
+	heatmap = plt.imshow(np.transpose(C), cmap=cmap)
+	cbar = plt.colorbar(heatmap)
+	cbar.ax.get_yaxis().set_ticks([])
+	for j, lab in enumerate(['Non-Urban to Non-Urban', 'Non-Urban to Urban', 'Urban to Urban']):
+		cbar.ax.text(3, (2 * j + 1) / 6.0, lab, ha='left', va='center')
+	cbar.ax.get_yaxis().labelpad = 15
+	cbar.ax.set_yticklabels('Transition classes', rotation=270)
+	
+	plt.show()
+	
 	C = np.asarray(C>0,dtype = np.int32)
 
 	Btd = np.asarray(Bt>0,dtype = np.int32)
 	Btnxtd = np.asarray(Btnxt>0,dtype = np.int32)
 	print metrics.change_metric(R,Btd,Btnxtd,C)
+	return Btnxtd
 
 def viz_layer1(R,V):
 	shp = R.shape
@@ -77,6 +91,50 @@ def viz_layer2(R,V):
 		plt.imshow(np.transpose(C))
 		plt.show()
 	
+def urbangrowth_predict(R,V,Bt,model):
+	shp = Bt.shape
+	X = []
+	Bt = Bt.reshape([1,shp[0],shp[1]])
+	for i in range(0,shp[0]):
+		for j in range(0,shp[1]):
+			if(R[0][i][j]!=0):
+				x=INPUT.create_window(Bt,i,j,3,3)
+				X.append(x)
+	X = np.array(X)
+	X = X.reshape([-1,9])
+	V = np.concatenate([V[:,0:27],X],axis=1)
+	P = model.predict(V)
+	C=np.zeros((shp[0],shp[1]))
+	k=0
+	for i in range(0,shp[0]):
+		for j in range(0,shp[1]):
+			if(R[0][i][j]>0):
+				C[i][j] = P[k]
+				k=k+1
+	return C
+
+def urbangrowth_predictn(R,V,Bt,model,n=4):
+	C = []
+	shp = R.shape
+	S = np.zeros((shp[1],shp[2]))
+	for i in range(0,n):
+		print 'Time step ',i
+		C = urbangrowth_predict(R,V,Bt,model)
+		Bt = np.asarray(C>0,dtype = np.int32)
+		S = S+Bt
+		Bt[C==0] = -1
+	
+	fig, ax = plt.subplots()
+	cmap = colors.ListedColormap(['black', 'red', 'blue', 'green', 'white'])	
+	heatmap = plt.imshow(np.transpose(C), cmap=cmap)
+	cbar = plt.colorbar(heatmap)
+	cbar.ax.get_yaxis().set_ticks([])
+	for j, lab in enumerate(['Non Urban', '2031', '2021', '2011','2001']):
+		cbar.ax.text(3, (2 * j + 1) / 10.0, lab, ha='left', va='center')
+	cbar.ax.get_yaxis().labelpad = 15
+	cbar.ax.set_yticklabels('Transition classes', rotation=270)
+	plt.savefig('sim2031.png')
+	return
 
 def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
 	wx=3
@@ -117,20 +175,24 @@ def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
 	#MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
 	model = METHOD.method_fit(trX,trY,B)
 	
+	#urbangrowth_predictn(R,V,Bt,model)
+	#exit()
+	
 	classify(R,V,Bt,Btnxt,model)
+	
 	V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
 	V = V.reshape([-1,36])
 	classify(R,V,Bt,Btnxt,model)
 	
 
 if __name__ == "__main__":
-	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
-	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/mumbai/'
+	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/kolkata/'
+	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/kolkata/'
 	
-	R = INPUT.give_raster(raw_loc + '1990.tif')
-	Bt = INPUT.give_raster(label_loc + 'cimg1996.tif')[0]
-	Btnxt = INPUT.give_raster(label_loc + 'cimg2000.tif')[0]
-	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2010.tif')[0]
+	R = INPUT.give_raster(raw_loc + '1991.tif')
+	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
+	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
+	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
 	
 	
 	'''R = R[:,286:783,345:802]
@@ -142,13 +204,15 @@ if __name__ == "__main__":
 	Btnxt = Btnxt/255
 	Btnxtnxt = Btnxtnxt/255
 	
+	Bt[Bt>0] = 1
+	Bt[Bt<=0] = -1
+	Btnxt[Btnxt==0] = -1
+	#Bt,Btnxt = DATASET.ageBuiltUp(R,Bt,Btnxt,1,first = True)
 	
-	Bt,Btnxt = DATASET.ageBuiltUp(R,Bt,Btnxt,0.1,first = True)
-	
-	Btnxt,Btnxtnxt = DATASET.ageBuiltUp(R,Btnxt,Btnxtnxt,0.1,first=False)
+	#Btnxt,Btnxtnxt = DATASET.ageBuiltUp(R,Btnxt,Btnxtnxt,0.1,first=False)
 	
 	
-	run(R,Bt,Btnxt,Btnxtnxt,generate = False)
+	run(R,Bt,Btnxt,Btnxtnxt,generate = True)
 	
 	
 	

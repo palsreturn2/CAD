@@ -54,8 +54,8 @@ if __name__ == "__main__":
 
 	cax = ax.scatter(dv[:,0],dv[:,1],marker='o',c=y,cmap = cm.coolwarm)
 	ax.set_title('Visualization of Feature vectors for Urban growth CA model')
-	cbar = fig.colorbar(cax, ticks=[0, 1, 2])
-	cbar.ax.set_yticklabels(['Non-Urban to Urban', 'Urban to Urban', 'Non-Urban to Non-Urban'])  # vertically oriented colorbar
+	cbar = fig.colorbar(cax, ticks=[0, 1, 2, 3])
+	cbar.ax.set_yticklabels(['Non-Urban to Non-Urban', 'Urban to Urban', 'Non-Urban to Urban'])  # vertically oriented colorbar
 
 	plt.show()
 

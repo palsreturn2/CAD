@@ -11,16 +11,22 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
+from RBFN import RBF
 import time
 import run
+from sklearn.model_selection import cross_val_score
 
 def method_fit(trX,trY):	
 	#model = SGDClassifier()
 	#model = DecisionTreeClassifier()
-	model = RandomForestClassifier()
+	#model = RandomForestClassifier()
 	#model = MLPClassifier()
 	#model = AdaBoostClassifier()
-	#model = SVC()
+	#model = RBF(trX.shape[1],10,1)
+	model = SVC()
+	
+	scores = cross_val_score(model,trX,trY,cv=10)
+	print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
 	#model = GaussianNB()
 	start = time.time()
 	model.fit(trX,trY)
@@ -43,10 +49,10 @@ if __name__ =="__main__":
 	Btnxt = Btnxt/255
 	Btnxtnxt = Btnxtnxt/255
 	
-	trX = np.load(data_folder+'trainX.npy')
+	trX = np.load(data_folder+'trainX.npy')[:,5:]
 	trY = np.load(data_folder+'DCAP_trY.npy')
 	B = np.load(data_folder +'DCAP_B.npy')
-	teX = np.load(data_folder+'testX.npy')
+	teX = np.load(data_folder+'testX.npy')[:,5:]
 	
 	trY[np.logical_and(trY>=0, B<0)] = 1
 	trY[np.logical_and(trY>=0, B>=0)] = 2
