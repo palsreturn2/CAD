@@ -50,7 +50,7 @@ def classify(R,V,Bt,Btnxt,model):
 	cbar.ax.get_yaxis().labelpad = 15
 	cbar.ax.set_yticklabels('Transition classes', rotation=270)
 	
-	plt.show()
+	#plt.show()
 	
 	C = np.asarray(C>0,dtype = np.int32)
 
@@ -121,6 +121,7 @@ def urbangrowth_predictn(R,V,Bt,model,n=4):
 		print 'Time step ',i
 		C = urbangrowth_predict(R,V,Bt,model)
 		Bt = np.asarray(C>0,dtype = np.int32)
+		scipy.misc.imsave('pred'+str(i)+'.png', np.transpose(Bt))
 		S = S+Bt
 		Bt[C==0] = -1
 	
@@ -175,19 +176,19 @@ def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
 	#MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
 	model = METHOD.method_fit(trX,trY,B)
 	
-	#urbangrowth_predictn(R,V,Bt,model)
+	#urbangrowth_predictn(R,V,Bt,model,n=10)
 	#exit()
 	
 	classify(R,V,Bt,Btnxt,model)
 	
 	V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
 	V = V.reshape([-1,36])
-	classify(R,V,Bt,Btnxt,model)
+	classify(R,V,Btnxt,Btnxtnxt,model)
 	
 
 if __name__ == "__main__":
-	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/kolkata/'
-	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/kolkata/'
+	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
+	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/mumbai/'
 	
 	R = INPUT.give_raster(raw_loc + '1991.tif')
 	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
@@ -212,7 +213,7 @@ if __name__ == "__main__":
 	#Btnxt,Btnxtnxt = DATASET.ageBuiltUp(R,Btnxt,Btnxtnxt,0.1,first=False)
 	
 	
-	run(R,Bt,Btnxt,Btnxtnxt,generate = True)
+	run(R,Bt,Btnxt,Btnxtnxt,generate = False)
 	
 	
 	
