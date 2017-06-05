@@ -24,6 +24,8 @@ def dcap_dataset(R,Bt,Btnxt,wx,wy):
 				trX.append(x)
 				trY.append(Btnxt[i][j])
 				B.append(Bt[i][j])
+			if(R[0][i][j]!=0):
+				x=INPUT.create_window(Rn,i,j,wx,wy)			
 				V.append(x)
 	return np.array(trX),np.array(trY),np.array(teX),np.array(teY),np.array(V),np.array(B)
 	

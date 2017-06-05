@@ -181,9 +181,9 @@ def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
 	
 	classify(R,V,Bt,Btnxt,model)
 	
-	V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
-	V = V.reshape([-1,36])
-	classify(R,V,Btnxt,Btnxtnxt,model)
+	#V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
+	#V = V.reshape([-1,36])
+	#classify(R,V,Btnxt,Btnxtnxt,model)
 	
 
 if __name__ == "__main__":
@@ -208,12 +208,13 @@ if __name__ == "__main__":
 	Bt[Bt>0] = 1
 	Bt[Bt<=0] = -1
 	Btnxt[Btnxt==0] = -1
+	Btnxtnxt[Btnxtnxt==0] = -1
 	#Bt,Btnxt = DATASET.ageBuiltUp(R,Bt,Btnxt,1,first = True)
 	
 	#Btnxt,Btnxtnxt = DATASET.ageBuiltUp(R,Btnxt,Btnxtnxt,0.1,first=False)
 	
 	
-	run(R,Bt,Btnxt,Btnxtnxt,generate = False)
+	run(R,Btnxt,Btnxtnxt,Btnxtnxt,generate = False)
 	
 	
 	

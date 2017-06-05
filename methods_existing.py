@@ -25,14 +25,14 @@ def method_fit(trX,trY):
 	#model = RBF(trX.shape[1],10,1)
 	model = SVC()
 	
-	scores = cross_val_score(model,trX,trY,cv=10)
-	print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
+	#scores = cross_val_score(model,trX,trY,cv=10)
+	#print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
 	#model = GaussianNB()
 	start = time.time()
 	model.fit(trX,trY)
 	print time.time()-start
 	#sklearn.tree.export_graphviz(model, out_file = 'ca_Decision_tree.dot', max_depth=5)
-	#exit()
+	exit()
 	return model
 	
 if __name__ =="__main__":
@@ -40,10 +40,10 @@ if __name__ =="__main__":
 	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
 	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/mumbai/'
 	
-	R = INPUT.give_raster(raw_loc + '1990.tif')
-	Bt = INPUT.give_raster(label_loc + 'cimg1996.tif')[0]
-	Btnxt = INPUT.give_raster(label_loc + 'cimg2000.tif')[0]
-	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2010.tif')[0]
+	R = INPUT.give_raster(raw_loc + '1991.tif')
+	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
+	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
+	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
 	
 	Bt = Bt/255
 	Btnxt = Btnxt/255

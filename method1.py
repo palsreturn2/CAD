@@ -37,19 +37,20 @@ def method_fit(trX,trY,B):
 	
 	#model = SGDClassifier()
 	#model = DecisionTreeClassifier()
-	model = RandomForestClassifier()
+	#model = RandomForestClassifier(max_depth=100,n_estimators=10)
 	#model = MLPClassifier(hidden_layer_sizes=(10,5,3), activation = "tanh", learning_rate='adaptive', max_iter=100)
-	#model = MLPClassifier(hidden_layer_sizes=(10,), activation = "tanh", learning_rate='adaptive', max_iter=100)
-	#model = AdaBoostClassifier()
-	#model = SVC()
+	#model = MLPClassifier(activation = "tanh", learning_rate='adaptive', max_iter=100)
+	model = AdaBoostClassifier()
+	#model = SVC(kernel = "linear", tol=0.01)
 	#model = GaussianNB()
 	
-	#scores = cross_val_score(model,trX,trY,cv=5)
+	#scores = cross_val_score(model,trX,trY,cv=2)
 	#print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
-	#exit()
+	
 	start = time.time()
 	model.fit(trX,trY)
 	print time.time()-start
+	#exit()
 	#sklearn.tree.export_graphviz(model, out_file = 'ca_Decision_tree.dot', max_depth=3)
 	return model
 
