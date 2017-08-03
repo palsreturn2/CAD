@@ -21,44 +21,6 @@ from sklearn.svm import SVR
 import method1 as METHOD
 import time
 
-def classify(R,V,Bt,Btnxt,model):
-	shp=R.shape
-	print 'Segmentation started'
-	#P=MLP.predict(V)
-	#P = MLP.predict(V[:,27:36],V[:,0:27])
-	start = time.time()
-	P = model.predict(V)
-	print time.time()-start
-	#P = METHOD.method_predict(model,V)
-	print 'Segmentation complete'	
-	C=np.zeros((shp[1],shp[2]))
-	k=0
-	for i in range(0,shp[1]):
-		for j in range(0,shp[2]):
-			if(R[0][i][j]>0):
-				C[i][j] = P[k]
-				k=k+1
-	np.save('Classified.npy',C)
-	
-	fig, ax = plt.subplots()
-	cmap = colors.ListedColormap(['white', 'red', 'blue'])	
-	heatmap = plt.imshow(np.transpose(C), cmap=cmap)
-	cbar = plt.colorbar(heatmap)
-	cbar.ax.get_yaxis().set_ticks([])
-	for j, lab in enumerate(['Non-Urban to Non-Urban', 'Non-Urban to Urban', 'Urban to Urban']):
-		cbar.ax.text(3, (2 * j + 1) / 6.0, lab, ha='left', va='center')
-	cbar.ax.get_yaxis().labelpad = 15
-	cbar.ax.set_yticklabels('Transition classes', rotation=270)
-	
-	#plt.show()
-	
-	C = np.asarray(C>0,dtype = np.int32)
-
-	Btd = np.asarray(Bt>0,dtype = np.int32)
-	Btnxtd = np.asarray(Btnxt>0,dtype = np.int32)
-	print metrics.change_metric(R,Btd,Btnxtd,C)
-	return Btnxtd
-
 def viz_layer1(R,V):
 	shp = R.shape
 	P = DCAP.layer1(V)
@@ -137,7 +99,57 @@ def urbangrowth_predictn(R,V,Bt,model,n=4):
 	plt.savefig('sim2031.png')
 	return
 
-def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
+def classify(R,V,Bt,Btnxt,model, plot_fname=None):
+	shp=R.shape
+	print 'Segmentation started'
+	#P = MLP.predict(V)
+	
+	#P = MLP.predict(V[:,27:36],V[:,0:27])
+	start = time.time()
+	P = model.predict(V)
+	#P = DCAP.predict(V)
+	print time.time()-start
+	#P = METHOD.method_predict(model,V)
+	print 'Segmentation complete'	
+	C=np.zeros((shp[1],shp[2]))
+	M = np.zeros((shp[1],shp[2]))
+	k=0
+	for i in range(0,shp[1]):
+		for j in range(0,shp[2]):
+			if(R[0][i][j]>0):
+				C[i][j] = P[k]				
+				if(P[k]>0 and Btnxt[i][j]>0):
+					M[i][j]=1
+				elif(P[k]>0 and Btnxt[i][j]<=0):
+					M[i][j]=2
+				elif(P[k]<=0 and Btnxt[i][j]>0):
+					M[i][j]=3
+				k=k+1
+	np.save('Classified.npy',C)
+	
+	fig, ax = plt.subplots()
+	cmap = colors.ListedColormap(['white', 'red', 'blue'])	
+	heatmap = plt.imshow(np.transpose(C), cmap=cmap)
+	cbar = plt.colorbar(heatmap)
+	cbar.ax.get_yaxis().set_ticks([])
+	for j, lab in enumerate(['Non-Urban to Non-Urban', 'Non-Urban to Urban', 'Urban to Urban']):
+		cbar.ax.text(3, (2 * j + 1) / 6.0, lab, ha='left', va='center')
+	cbar.ax.get_yaxis().labelpad = 15
+	cbar.ax.set_yticklabels('Transition classes', rotation=270)
+	plt.autoscale(tight=True)
+
+	
+	if(plot_fname!=None):
+		plt.savefig("results/"+plot_fname, bbox_inches="tight")
+	
+	C = np.asarray(C>0,dtype = np.int32)
+
+	Btd = np.asarray(Bt>0,dtype = np.int32)
+	Btnxtd = np.asarray(Btnxt>0,dtype = np.int32)
+	print metrics.change_metric(R,Btd,Btnxtd,C)
+	return Btnxtd
+
+def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 	wx=3
 	wy=3
 	shp=R.shape
@@ -160,26 +172,36 @@ def run(R,Bt,Btnxt,Btnxtnxt, generate = False):
 	
 	print 'Dimension of input : ', len(trX[0])
 	print 'Training set size : ', trX.shape[0]
-
-	print 'Training set generation ended'
 	
+	trY[np.logical_and(trY>=0, B<0)] = 1
+	trY[np.logical_and(trY<=0, B>0)] = 2
+	trY[np.logical_and(trY>=0, B>=0)] = 2
+	trY[np.logical_and(trY<=0, B<0)] = 0
+	
+	print 'Training set generation ended'
+	exit()
 	if(wx!=3 or wy!=3):
 		print 'Window size has to be 3X3'
 		return
 	
-	#DCAP.fit(trX, trY, B, epoch = 20, batch_size = 1000, early_stop=True)
-	trX = trX.reshape([trX.shape[0],36])
-	V = V.reshape([V.shape[0],36])
+	#start=time.time()
+	#DCAP.fit(trX, trY, B, epoch = 350, batch_size = 1000, early_stop=True)
+	#print time.time()-start
+	#trX = trX.reshape([trX.shape[0],36])
+	#V = V.reshape([V.shape[0],36])
 	
 	#model = SGDRegressor()
 	#model.fit(trX,trY)
 	#MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
-	model = METHOD.method_fit(trX,trY,B)
-	
+	models = ['dt','sgd','rf','mlp','ada','nb']
+	for m in models:
+		model = METHOD.method_fit(trX,trY,B,m)
+		classify(R,V,Bt,Btnxt,model,plot_fname)
+	#classify(R,V,Bt,Btnxt,None,plot_fname)
 	#urbangrowth_predictn(R,V,Bt,model,n=10)
 	#exit()
 	
-	classify(R,V,Bt,Btnxt,model)
+	
 	
 	#V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
 	#V = V.reshape([-1,36])
@@ -194,7 +216,7 @@ if __name__ == "__main__":
 	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
 	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
 	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
-	
+	road = INPUT.give_raster(label
 	
 	'''R = R[:,286:783,345:802]
 	Bt = Bt[286:783,345:802]
@@ -213,8 +235,11 @@ if __name__ == "__main__":
 	
 	#Btnxt,Btnxtnxt = DATASET.ageBuiltUp(R,Btnxt,Btnxtnxt,0.1,first=False)
 	
+	pfname = None
+	if(len(sys.argv)>=2):
+		pfname=sys.argv[1]
 	
-	run(R,Btnxt,Btnxtnxt,Btnxtnxt,generate = False)
+	run(R,Bt,Btnxt,Btnxtnxt,plot_fname=pfname, generate = True)
 	
 	
 	

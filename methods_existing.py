@@ -16,23 +16,34 @@ import time
 import run
 from sklearn.model_selection import cross_val_score
 
-def method_fit(trX,trY):	
-	#model = SGDClassifier()
-	#model = DecisionTreeClassifier()
-	#model = RandomForestClassifier()
-	#model = MLPClassifier()
-	#model = AdaBoostClassifier()
+def method_fit(trX,trY, model):	
+	if(model == "sgd"):
+		model = SGDClassifier()
+	elif(model=="dt"):
+		model = DecisionTreeClassifier()
+	elif(model=="rf"):
+		model = RandomForestClassifier(n_estimators=10)
+	elif(model=="mlp"):
+		model = MLPClassifier(hidden_layer_sizes=(100,), activation = "tanh", learning_rate='adaptive', max_iter=100)
+		#model = MLPClassifier(activation = "tanh", learning_rate='adaptive', max_iter=100)
+	elif(model=="ada"):
+		model = AdaBoostClassifier()
+	elif(model=="knn"):
+		model = KNeighborsClassifier()
+	elif(model=="svc"):
+		model = SVC(kernel = "linear", tol=0.01)
+	elif(model=="nb"):
+		model = GaussianNB()
 	#model = RBF(trX.shape[1],10,1)
-	model = SVC()
 	
 	#scores = cross_val_score(model,trX,trY,cv=10)
 	#print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
-	#model = GaussianNB()
+
+	print model
 	start = time.time()
 	model.fit(trX,trY)
 	print time.time()-start
 	#sklearn.tree.export_graphviz(model, out_file = 'ca_Decision_tree.dot', max_depth=5)
-	exit()
 	return model
 	
 if __name__ =="__main__":
@@ -49,17 +60,19 @@ if __name__ =="__main__":
 	Btnxt = Btnxt/255
 	Btnxtnxt = Btnxtnxt/255
 	
-	trX = np.load(data_folder+'trainX.npy')[:,5:]
+	trX = np.load(data_folder+'nmumbaiX.npy')[:]
 	trY = np.load(data_folder+'DCAP_trY.npy')
 	B = np.load(data_folder +'DCAP_B.npy')
-	teX = np.load(data_folder+'testX.npy')[:,5:]
+	teX = np.load(data_folder+'testX.npy')[:]
 	
 	trY[np.logical_and(trY>=0, B<0)] = 1
 	trY[np.logical_and(trY>=0, B>=0)] = 2
 	trY[np.logical_and(trY<=0, B<0)] = 0
 	
-	model = method_fit(trX,trY)
+	models = ['sgd','dt','mlp']
 	
-	run.classify(R,trX,Bt,Btnxt,model)
-	run.classify(R,teX,Btnxt,Btnxtnxt,model)
+	for m in models:
+		model = method_fit(trX,trY,m)
+		run.classify(R,trX,Bt,Btnxt,model)
+	#run.classify(R,teX,Btnxt,Btnxtnxt,model)
 	

@@ -11,6 +11,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import cross_val_score
+from sklearn.neighbors import KNeighborsClassifier
 import time
 
 def select_classifier(trX,trY):
@@ -27,26 +28,32 @@ def select_classifier(trX,trY):
 	
 	print "Model evaluation ended"
 
-def method_fit(trX,trY,B):
+def method_fit(trX,trY,B, model):
 	#pca=PCA(n_components=5)
 	#print np.sum(np.logical_and(trY<=0, B>0))
-	trY[np.logical_and(trY>=0, B<0)] = 1
-	trY[np.logical_and(trY<=0, B>0)] = 2
-	trY[np.logical_and(trY>=0, B>=0)] = 2
-	trY[np.logical_and(trY<=0, B<0)] = 0
 	
-	#model = SGDClassifier()
-	#model = DecisionTreeClassifier()
-	#model = RandomForestClassifier(max_depth=100,n_estimators=10)
-	#model = MLPClassifier(hidden_layer_sizes=(10,5,3), activation = "tanh", learning_rate='adaptive', max_iter=100)
+	if(model == "sgd"):
+		model = SGDClassifier()
+	elif(model=="dt"):
+		model = DecisionTreeClassifier()
+	elif(model=="rf"):
+		model = RandomForestClassifier(n_estimators=10)
+	elif(model=="mlp"):
+		model = MLPClassifier(hidden_layer_sizes=(100,), activation = "tanh", learning_rate='adaptive', max_iter=100)
 	#model = MLPClassifier(activation = "tanh", learning_rate='adaptive', max_iter=100)
-	model = AdaBoostClassifier()
-	#model = SVC(kernel = "linear", tol=0.01)
-	#model = GaussianNB()
+	elif(model=="ada"):
+		model = AdaBoostClassifier()
+	elif(model=="knn"):
+		model = KNeighborsClassifier()
+	elif(model=="svc"):
+		model = SVC(kernel = "linear", tol=0.01, cache=7000)
+	elif(model=="nb"):
+		model = GaussianNB()
 	
 	#scores = cross_val_score(model,trX,trY,cv=2)
 	#print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
 	
+	print model
 	start = time.time()
 	model.fit(trX,trY)
 	print time.time()-start
