@@ -13,6 +13,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 import time
+from sklearn.externals import joblib
 
 def select_classifier(trX,trY):
 	models = []
@@ -53,12 +54,13 @@ def method_fit(trX,trY,B, model):
 	#scores = cross_val_score(model,trX,trY,cv=2)
 	#print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
 	
-	print model
+	#print model
 	start = time.time()
 	model.fit(trX,trY)
+	joblib.dump(model, 'model.pkl')
 	print time.time()-start
 	#exit()
-	#sklearn.tree.export_graphviz(model, out_file = 'ca_Decision_tree.dot', max_depth=3)
+	sklearn.tree.export_graphviz(model, out_file = 'ca_Decision_tree.dot', max_depth=None)
 	return model
 
 	

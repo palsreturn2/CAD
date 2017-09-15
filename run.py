@@ -10,7 +10,6 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import colors
-import dcapnet as DCAP
 import mlp as MLP
 import scipy.ndimage
 import scipy.misc
@@ -55,6 +54,7 @@ def viz_layer2(R,V):
 	
 def urbangrowth_predict(R,V,Bt,model):
 	shp = Bt.shape
+	print shp
 	X = []
 	Bt = Bt.reshape([1,shp[0],shp[1]])
 	for i in range(0,shp[0]):
@@ -66,14 +66,29 @@ def urbangrowth_predict(R,V,Bt,model):
 	X = X.reshape([-1,9])
 	V = np.concatenate([V[:,0:27],X],axis=1)
 	P = model.predict(V)
-	C=np.zeros((shp[0],shp[1]))
+	C = np.zeros((shp[0],shp[1]))
 	k=0
 	for i in range(0,shp[0]):
 		for j in range(0,shp[1]):
-			if(R[0][i][j]>0):
+			if(R[0][i][j]>0):			
 				C[i][j] = P[k]
 				k=k+1
 	return C
+
+def merge(R, C):
+	shp = R.shape
+	M = np.zeros(R.shape)
+	for i in range(0,shp[1]):
+		for j in range(0,shp[2]):
+			if(C[i][j]>0):
+				M[0][i][j] = 255
+				M[1][i][j] = 255
+				M[2][i][j] = 255
+			else:
+				M[0][i][j] = R[0][i][j]
+				M[1][i][j] = R[1][i][j]
+				M[2][i][j] = R[2][i][j]
+	return M
 
 def urbangrowth_predictn(R,V,Bt,model,n=4):
 	C = []
@@ -83,7 +98,7 @@ def urbangrowth_predictn(R,V,Bt,model,n=4):
 		print 'Time step ',i
 		C = urbangrowth_predict(R,V,Bt,model)
 		Bt = np.asarray(C>0,dtype = np.int32)
-		scipy.misc.imsave('pred'+str(i)+'.png', np.transpose(Bt))
+		scipy.misc.imsave('pred'+str(i)+'.png', np.transpose(merge(R,C)))
 		S = S+Bt
 		Bt[C==0] = -1
 	
@@ -170,7 +185,7 @@ def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 		V = np.load('./dataset/DCAP_V.npy')
 		B = np.load('./dataset/DCAP_B.npy')
 	
-	print 'Dimension of input : ', len(trX[0])
+	print 'Dimension of input : ', trX.shape
 	print 'Training set size : ', trX.shape[0]
 	
 	trY[np.logical_and(trY>=0, B<0)] = 1
@@ -179,7 +194,7 @@ def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 	trY[np.logical_and(trY<=0, B<0)] = 0
 	
 	print 'Training set generation ended'
-	exit()
+
 	if(wx!=3 or wy!=3):
 		print 'Window size has to be 3X3'
 		return
@@ -187,18 +202,19 @@ def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 	#start=time.time()
 	#DCAP.fit(trX, trY, B, epoch = 350, batch_size = 1000, early_stop=True)
 	#print time.time()-start
-	#trX = trX.reshape([trX.shape[0],36])
-	#V = V.reshape([V.shape[0],36])
+	trX = trX.reshape([trX.shape[0],36])
+	V = V.reshape([V.shape[0],36])
 	
 	#model = SGDRegressor()
 	#model.fit(trX,trY)
 	#MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
-	models = ['dt','sgd','rf','mlp','ada','nb']
+	#models = ['dt','sgd','rf','mlp','ada','nb']
+	models = ['dt']
 	for m in models:
 		model = METHOD.method_fit(trX,trY,B,m)
-		classify(R,V,Bt,Btnxt,model,plot_fname)
+		#classify(R,V,Bt,Btnxt,model,plot_fname)
 	#classify(R,V,Bt,Btnxt,None,plot_fname)
-	#urbangrowth_predictn(R,V,Bt,model,n=10)
+	#urbangrowth_predictn(R,V,Bt,model,n=5)
 	#exit()
 	
 	
@@ -216,7 +232,7 @@ if __name__ == "__main__":
 	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
 	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
 	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
-	road = INPUT.give_raster(label
+
 	
 	'''R = R[:,286:783,345:802]
 	Bt = Bt[286:783,345:802]
@@ -239,7 +255,7 @@ if __name__ == "__main__":
 	if(len(sys.argv)>=2):
 		pfname=sys.argv[1]
 	
-	run(R,Bt,Btnxt,Btnxtnxt,plot_fname=pfname, generate = True)
+	run(R,Btnxt,Btnxtnxt,Btnxtnxt,plot_fname=pfname, generate = False)
 	
 	
 	
