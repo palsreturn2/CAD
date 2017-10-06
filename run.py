@@ -170,7 +170,7 @@ def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 	shp=R.shape
 	print 'Training set generation started'	
 	if generate:
-		trX, trY, teX, teY, V, B = DATASET.dcap_dataset(R,Bt,Btnxt,wx,wy)
+		trX, trY, teX, teY, V, B = DATASET.cad_dataset(R,Bt,Btnxt,wx,wy)
 		np.save('./dataset/DCAP_trX.npy',trX)
 		np.save('./dataset/DCAP_trY.npy',trY)
 		np.save('./dataset/DCAP_teX.npy',teX)

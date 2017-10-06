@@ -14,6 +14,8 @@ from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 import time
 from sklearn.externals import joblib
+from osgeo import ogr
+import rnn_enc_dec as RED
 
 def select_classifier(trX,trY):
 	models = []
@@ -63,5 +65,55 @@ def method_fit(trX,trY,B, model):
 	sklearn.tree.export_graphviz(model, out_file = 'ca_Decision_tree.dot', max_depth=None)
 	return model
 
+	
+def method(Rx, res=1):
+	Rv = []
+	seqlen = []
+	c=0
+	cantor_pair_func = lambda k1,k2: (k1+k2)*(k1+k2+1)/2.0 + k2
+	max_point_count = 0
+	
+	for r in Rx:
+		for i in range(0, r.GetGeometryCount()):
+			for j in range(0, r.GetGeometryRef(i).GetPointCount()):
+				max_point_count = max(r.GetGeometryRef(i).GetPointCount(), max_point_count)
+	
+	for r in Rx:
+		x_train = np.zeros(max_point_count)
+		for i in range(0,r.GetGeometryCount()):
+			for j in range(0,r.GetGeometryRef(i).GetPointCount()):
+				x_train[j] = cantor_pair_func(r.GetGeometryRef(i).GetPoint(i)[0],r.GetGeometryRef(i).GetPoint(i)[1])
+				
+			Rv.append(x_train)
+			seqlen.append(r.GetGeometryRef(i).GetPointCount())
+	
+	print max_point_count
+	return np.array(Rv), np.array(seqlen)
+	
+	
+if __name__=="__main__":
+	'''Rx = np.load('./dataset/Road_trX.npy')
+	
+	X, seqlen = method(Rx)
+	print X.shape
+	np.save('./dataset/Sequences_trX.npy',X)
+	np.save('./dataset/SequenceLenth_trX.npy', seqlen)'''
+	
+	X = np.load('./dataset/Sequences_trX.npy')
+	X = X.reshape([X.shape[0],X.shape[1],1])
+	
+	X = (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) - np.min(np.ndarray.flatten(X)))
+	
+	seqlen = np.load('./dataset/SequenceLenth_trX.npy')
+	
+	model = RED.DynamicRNNAE()
+	model.run_dynamic_rnn(X, seqlen)
+	
+	
+	
+	
+	
+	
+	
 	
 	

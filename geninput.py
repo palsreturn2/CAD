@@ -43,6 +43,35 @@ def create_window(raster,posx,posy,sx,sy):
 		np.copyto(window[k],w)
 	return window
 
+def create_vector_window(raster_ds, posx, posy, sx, sy, H):
+	x,y = pixel2coord(raster_ds, posx, posy)
+	c, a, b, f, d, e = raster_ds.GetGeoTransform()
+	winx = (sx+0.5)*a
+	winy = (sy+0.5)*e
+	
+	row = len(H)
+	col = len(H[0])
+
+	
+	multiline = ogr.Geometry(ogr.wkbMultiLineString)
+	
+	wkt = "POLYGON (("+str(x-winx if x-winx>=0 else 0)+" "+str(y-winy if y-winy>=0 else 0)+","+str(x-winx if x-winx>=0 else 0)+" "+str(y+winy)+","+str(x+winx)+" "+str(y+winy)+","+str(x+winx)+" "+str(y-winy if y-winy>=0 else 0)+","+str(x-winx if x-winx>=0 else 0)+" "+str(y-winy if y-winy>=0 else 0)+"))"
+
+	ring = ogr.CreateGeometryFromWkt(wkt)
+	for i in range(posx-sx, posx+sx+1):
+		for j in range(posy-sy, posy+sy+1):
+			if i>=0 and i<row and j>=0 and j<col:
+				for f in H[i][j]:								
+					g = f.GetGeometryRef()
+					for k in range(0,g.GetGeometryCount()):
+						geom = g.GetGeometryRef(k)
+						intersection = geom.Intersection(ring)
+						
+						if intersection.ExportToWkt()!='GEOMETRYCOLLECTION EMPTY':
+							multiline.AddGeometry(intersection)	
+							#print intersection.ExportToWkt()					
+	return multiline
+
 def get_chunk(I,px,py,wx,wy):
 	shp=I.shape
 	assert (px+wx)<shp[1]
@@ -65,6 +94,16 @@ def pixel2coord(ds,col,row):
 	xp = a * col + b * row + a * 0.5 + b * 0.5 + c
 	yp = d * col + e * row + d * 0.5 + e * 0.5 + f
 	return xp,yp
+
+def coord2pixel(ds, x, y):
+	geotransform = ds.GetGeoTransform()
+	originX = geotransform[0]
+	originY = geotransform[3]
+	pixelWidth = geotransform[1]
+	pixelHeight = geotransform[5]
+	row = int((x - originX)/pixelWidth)
+	col = int((y - originY)/pixelHeight)
+	return row,col
 
 def array_to_raster(array, dst_filename, SourceDS):
 	x_pixels = array.shape[1]  # number of pixels in x

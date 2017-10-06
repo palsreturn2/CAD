@@ -3,9 +3,10 @@ import numpy as np
 import geninput as INPUT
 import math
 from osgeo import gdal
+from osgeo import ogr
 from skimage import io
 
-def dcap_dataset(R,Bt,Btnxt,wx,wy):	
+def cad_dataset(R,Bt,Btnxt,wx,wy):	
 	shp=R.shape
 	Rn = R/(np.max(np.ndarray.flatten(R)))
 	for i in range(0,shp[0]):
@@ -28,7 +29,73 @@ def dcap_dataset(R,Bt,Btnxt,wx,wy):
 				x=INPUT.create_window(Rn,i,j,wx,wy)			
 				V.append(x)
 	return np.array(trX),np.array(trY),np.array(teX),np.array(teY),np.array(V),np.array(B)
+
+def func_populate_H(start_x, start_y, end_x, end_y, H, feature):
+	if start_x>end_x:
+		return
 	
+	if start_x==end_x:
+		if start_y==end_y:
+			if feature not in H[start_x][start_y]:
+				H[start_x][start_y].append(feature)
+			return H
+		for y in range(start_y, end_y):
+			if feature not in H[start_x][y]:
+				H[start_x][y].append(feature)
+		return H	
+	
+	deltax = end_x-start_x
+	deltay = end_y-start_y
+	deltaerr = 2*deltay-deltax
+	y = start_y
+	for x in range(start_x, end_x):
+		if feature not in H[x][y]:
+			H[x][y].append(feature)
+		if(deltaerr>0):
+			y=y+1
+			deltaerr = deltaerr - 2*deltax
+		deltaerr = deltaerr + 2*deltay
+	return H
+	
+def cad_dataset_vector(raster_ds ,vector_ds , wx, wy):
+	[col, row, nbands] = INPUT.getAttr(raster_ds)
+	R = np.zeros((nbands,row,col))
+	H = [[[] for i in range(0,col)] for k in range(0,row)]
+	for i in range(0,nbands):
+		np.copyto(R[i],np.transpose(raster_ds.GetRasterBand(i+1).ReadAsArray(0,0,row,col)))
+	X = []
+	layer = vector_ds.GetLayer()
+	layer.ResetReading()
+	for feature in layer:
+		geom = feature.GetGeometryRef()
+		for j in range(0, geom.GetGeometryCount()):
+			g = geom.GetGeometryRef(j)
+			for i in range(0,g.GetPointCount()-1):
+				start_row,start_col = INPUT.coord2pixel(raster_ds, g.GetPoint(i)[0], g.GetPoint(i)[1])
+				end_row, end_col = INPUT.coord2pixel(raster_ds, g.GetPoint(i+1)[0], g.GetPoint(i+1)[1])
+				if start_row<=end_row:
+					H = func_populate_H(start_row, start_col, end_row, end_col, H, feature)
+				elif start_row>end_row:
+					H = func_populate_H(end_row, end_col, start_row, start_col, H, feature)
+					
+	c = 0
+	for i in range(0,row):
+		for j in range(0,col):
+			if len(H[i][j])!=0:
+				c = c+1
+	print c
+	c = 0 
+	for i in range(0,row):
+		for j in range(0,col):
+			if(R[0][i][j]!=0):				
+				ml = INPUT.create_vector_window(raster_ds, i, j, wx, wy, H)
+				if ml.ExportToWkt()!='MULTILINESTRING EMPTY':
+					#print "not empty"
+					c=c+1
+				X.append(ml)
+	print c
+	return np.array(X)
+
 def ageBuiltUp(R, Bt, Btnxt, age, first = True):
 	shp = Bt.shape
 	if(first):		
@@ -99,14 +166,19 @@ def smoter(X,Y,tE,p,u,k):
 	normCases[np.random.randint(low=0, high = normCases.shape[0], size = normCases.shape[0]-nrnorm)] = False
 	return np.concatenate((normCases,newCases))
 	
-	
 if __name__ == "__main__":
-	trX = np.load('./dataset/DCAP_trX.npy')
-	trY = np.load('./dataset/DCAP_trY.npy')
-	trX = trX.reshape([-1,36])
-	ntrX = smoter(trX,trY,0.1,0.0020,0.0020,3)
-	print ntrX.shape
-	np.save('./dataset/DCAP_SMOTE_trX.npy',ntrX)
+	roads_loc = '/home/ubuntu/workplace/saptarshi/Data/roads/mumbai/'
+	raster_loc = '/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
+	
+	driver = ogr.GetDriverByName('ESRI Shapefile')
+
+	vector_ds = driver.Open(roads_loc+'roadsM.shp',0)
+	raster_ds = gdal.Open(raster_loc+'1991.tif')
+	X = cad_dataset_vector(raster_ds, vector_ds, 1,1)
+	np.save('./dataset/Road_trX.npy',X)
+		
+	
+	
 	
 	
 	
