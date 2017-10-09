@@ -5,6 +5,7 @@ import math
 from osgeo import gdal
 from osgeo import ogr
 from skimage import io
+import scipy
 
 def cad_dataset(R,Bt,Btnxt,wx,wy):	
 	shp=R.shape
@@ -66,24 +67,36 @@ def cad_dataset_vector(raster_ds ,vector_ds , wx, wy):
 	X = []
 	layer = vector_ds.GetLayer()
 	layer.ResetReading()
+	I = np.zeros([row,col])
 	for feature in layer:
 		geom = feature.GetGeometryRef()
 		for j in range(0, geom.GetGeometryCount()):
 			g = geom.GetGeometryRef(j)
+			if g.GetPointCount()==1:
+				start_row, start_col = INPUT.coord2pixel(raster_ds, g.GetPoint(0)[0], g.GetPoint(0)[1])
+				I[start_row][start_col] = 255
+				if feature not in H[start_row][start_col]:
+					H[start_row][start_col].append(feature)
 			for i in range(0,g.GetPointCount()-1):
-				start_row,start_col = INPUT.coord2pixel(raster_ds, g.GetPoint(i)[0], g.GetPoint(i)[1])
+				start_row, start_col = INPUT.coord2pixel(raster_ds, g.GetPoint(i)[0], g.GetPoint(i)[1])
 				end_row, end_col = INPUT.coord2pixel(raster_ds, g.GetPoint(i+1)[0], g.GetPoint(i+1)[1])
+				I[start_row][start_col] = 255
+				I[end_row][end_col] = 255
 				if start_row<=end_row:
 					H = func_populate_H(start_row, start_col, end_row, end_col, H, feature)
 				elif start_row>end_row:
 					H = func_populate_H(end_row, end_col, start_row, start_col, H, feature)
-					
+
 	c = 0
+	
 	for i in range(0,row):
 		for j in range(0,col):
 			if len(H[i][j])!=0:
 				c = c+1
 	print c
+	
+	scipy.misc.imsave('./dataset/debug.png', np.transpose(I))
+	exit()
 	c = 0 
 	for i in range(0,row):
 		for j in range(0,col):
@@ -175,7 +188,7 @@ if __name__ == "__main__":
 	vector_ds = driver.Open(roads_loc+'roadsM.shp',0)
 	raster_ds = gdal.Open(raster_loc+'1991.tif')
 	X = cad_dataset_vector(raster_ds, vector_ds, 1,1)
-	np.save('./dataset/Road_trX.npy',X)
+	#np.save('./dataset/Road_trX.npy',X)
 		
 	
 	

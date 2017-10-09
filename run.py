@@ -202,17 +202,17 @@ def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 	#start=time.time()
 	#DCAP.fit(trX, trY, B, epoch = 350, batch_size = 1000, early_stop=True)
 	#print time.time()-start
-	trX = trX.reshape([trX.shape[0],36])
-	V = V.reshape([V.shape[0],36])
+	trX = trX.reshape([trX.shape[0],-1])
+	V = V.reshape([V.shape[0],-1])
 	
 	#model = SGDRegressor()
 	#model.fit(trX,trY)
 	#MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
 	#models = ['dt','sgd','rf','mlp','ada','nb']
-	models = ['dt']
+	models = ['rf']
 	for m in models:
 		model = METHOD.method_fit(trX,trY,B,m)
-		#classify(R,V,Bt,Btnxt,model,plot_fname)
+		classify(R,V,Bt,Btnxt,model,plot_fname)
 	#classify(R,V,Bt,Btnxt,None,plot_fname)
 	#urbangrowth_predictn(R,V,Bt,model,n=5)
 	#exit()
@@ -232,7 +232,9 @@ if __name__ == "__main__":
 	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
 	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
 	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
-
+	Rx = INPUT.give_raster('/home/ubuntu/workplace/saptarshi/Data/roads/mumbai/roadsMumbai.tif')
+	
+	#R = np.concatenate([R,Rx], axis=0)
 	
 	'''R = R[:,286:783,345:802]
 	Bt = Bt[286:783,345:802]
@@ -255,7 +257,7 @@ if __name__ == "__main__":
 	if(len(sys.argv)>=2):
 		pfname=sys.argv[1]
 	
-	run(R,Btnxt,Btnxtnxt,Btnxtnxt,plot_fname=pfname, generate = False)
+	run(R,Bt,Btnxt,Btnxtnxt,plot_fname=pfname, generate = True)
 	
 	
 	
