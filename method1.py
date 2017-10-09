@@ -181,13 +181,13 @@ if __name__=="__main__":
 	R = INPUT.give_raster(raw_loc + '1991.tif')
 	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
 	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
-	#Rx = np.load('./dataset/Road_trX.npy')
+	Rx = np.load('./dataset/Road_trX.npy')
 	
-	#X, seqlen, index_array = method(Rx)
+	X, seqlen, index_array = method(Rx)
 
-	#np.save('./dataset/Sequences_trX.npy',X)
-	#np.save('./dataset/SequenceLenth_trX.npy', seqlen)
-	#np.save('./dataset/SequenceIndexArray.npy', index_array)
+	np.save('./dataset/Sequences_trX.npy',X)
+	np.save('./dataset/SequenceLenth_trX.npy', seqlen)
+	np.save('./dataset/SequenceIndexArray.npy', index_array)
 	
 	trX = np.load('./dataset/DCAP_trX.npy')
 	trX = trX.reshape([trX.shape[0],-1])
@@ -199,9 +199,9 @@ if __name__=="__main__":
 	trY[np.logical_and(trY>=0, B>=0)] = 2
 	trY[np.logical_and(trY<=0, B<0)] = 0
 	
-	X = np.load('./dataset/Sequences_trX.npy')
-	seqlen = np.load('./dataset/SequenceLenth_trX.npy')
-	index_array = np.load('./dataset/SequenceIndexArray.npy')
+	#X = np.load('./dataset/Sequences_trX.npy')
+	#seqlen = np.load('./dataset/SequenceLenth_trX.npy')
+	#index_array = np.load('./dataset/SequenceIndexArray.npy')
 	X = X.reshape([X.shape[0],X.shape[1],1])
 	
 	X = (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) - np.min(np.ndarray.flatten(X)))

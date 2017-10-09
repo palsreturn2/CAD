@@ -63,6 +63,10 @@ def create_vector_window(raster_ds, posx, posy, sx, sy, H):
 			if i>=0 and i<row and j>=0 and j<col:
 				for f in H[i][j]:								
 					g = f.GetGeometryRef()
+					if g.GetGeometryCount()==0:
+						intersection = g.Intersection(ring)
+						if intersection.ExportToWkt()!='GEOMETRYCOLLECTION EMPTY':
+							multiline.AddGeometry(intersection)	
 					for k in range(0,g.GetGeometryCount()):
 						geom = g.GetGeometryRef(k)
 						intersection = geom.Intersection(ring)

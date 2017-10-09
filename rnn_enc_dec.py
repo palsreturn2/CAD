@@ -6,11 +6,11 @@ class DynamicRNNAE:
 		# Parameters
 		self.learning_rate = 0.1
 		self.training_steps = 30
-		self.batch_size = 128
+		self.batch_size = 100000
 		self.display_step = 200
 
 		# Network Parameters
-		self.seq_max_len = 36 # Sequence max length
+		self.seq_max_len = 53 # Sequence max length
 		self.n_hidden = 1 # hidden layer num of features
 		
 		# tf Graph input
