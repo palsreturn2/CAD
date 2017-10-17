@@ -2,16 +2,17 @@ import tensorflow as tf
 import numpy as np
 
 class DynamicRNNAE:
-	def __init__(self):
+	def __init__(self, sml = 53, nfeatures = 1, tsteps = 30):
 		# Parameters
+		tf.reset_default_graph()
 		self.learning_rate = 0.1
-		self.training_steps = 30
+		self.training_steps = tsteps
 		self.batch_size = 100000
 		self.display_step = 200
 
 		# Network Parameters
-		self.seq_max_len = 53 # Sequence max length
-		self.n_hidden = 1 # hidden layer num of features
+		self.seq_max_len = sml # Sequence max length
+		self.n_hidden = nfeatures # hidden layer num of features
 		
 		# tf Graph input
 		self.x = tf.placeholder("float", [None,self.seq_max_len,1])	
@@ -57,13 +58,14 @@ class DynamicRNNAE:
 	def run_dynamic_rnn(self, X, S):
 		#dec_output = self.rnn_decoder()
 		#enc_output = self.rnn_encoder()
+		mse = []
 		for i in range(0,self.training_steps):
 			for j in range(0,X.shape[0], self.batch_size):
 				batch_x = X[j:min(j+self.batch_size, X.shape[0]),:,:]
 				batch_s = S[j:min(j+self.batch_size, S.shape[0])]				
 				self.sess.run(self.optimizer, feed_dict = {self.x: batch_x, self.seqlen: batch_s})
-			print self.sess.run(self.cost, feed_dict = {self.x: X, self.seqlen: S})
-		return 
+			mse.append(self.sess.run(self.cost, feed_dict = {self.x: X, self.seqlen: S}))
+		return mse
 	
 	def get_encoded_features(self, X, S):
 		return self.sess.run(self.outputs_enc, feed_dict={self.x: X, self.seqlen: S})

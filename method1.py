@@ -129,11 +129,16 @@ def method2(Sx, seqlen, trX, trY, index_array, feature_size=3):
 	
 	return trX_dash, trY_dash
 
-def method3(Sx, seqlen, trX, trY, index_array, feature_size = 1):
+def method3(Sx, seqlen, trX, trY, index_array, feature_size = 1, nsteps = 10):
 	shp =trX.shape
 	
-	rnn_model = RED.DynamicRNNAE()
-	rnn_model.run_dynamic_rnn(Sx, seqlen)
+	
+	rnn_model = RED.DynamicRNNAE(nfeatures = feature_size, tsteps = nsteps)
+	
+	start = time.time()
+	mse = rnn_model.run_dynamic_rnn(Sx, seqlen)
+	end = time.time()
+	
 	
 	enc_features = rnn_model.get_encoded_features(Sx, seqlen)
 	
@@ -149,7 +154,7 @@ def method3(Sx, seqlen, trX, trY, index_array, feature_size = 1):
 	temp = np.array(temp)
 	print temp.shape
 	trX = np.concatenate([trX, temp], axis=1)
-	return trX, trY
+	return trX, trY, end-start, mse
 
 def compute_metrics(R, Bt, Btnxt, P):
 	shp = R.shape
@@ -172,7 +177,7 @@ def compute_metrics(R, Bt, Btnxt, P):
 
 	Btd = np.asarray(Bt>0,dtype = np.int32)
 	Btnxtd = np.asarray(Btnxt>0,dtype = np.int32)
-	print metrics.change_metric(R,Btd,Btnxtd,C)
+	return metrics.change_metric(R,Btd,Btnxtd,C)
 
 if __name__=="__main__":
 	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
@@ -181,13 +186,13 @@ if __name__=="__main__":
 	R = INPUT.give_raster(raw_loc + '1991.tif')
 	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
 	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
-	Rx = np.load('./dataset/Road_trX.npy')
+	#Rx = np.load('./dataset/Road_trX.npy')
 	
-	X, seqlen, index_array = method(Rx)
+	#X, seqlen, index_array = method(Rx)
 
-	np.save('./dataset/Sequences_trX.npy',X)
-	np.save('./dataset/SequenceLenth_trX.npy', seqlen)
-	np.save('./dataset/SequenceIndexArray.npy', index_array)
+	#np.save('./dataset/Sequences_trX.npy',X)
+	#np.save('./dataset/SequenceLenth_trX.npy', seqlen)
+	#np.save('./dataset/SequenceIndexArray.npy', index_array)
 	
 	trX = np.load('./dataset/DCAP_trX.npy')
 	trX = trX.reshape([trX.shape[0],-1])
@@ -199,29 +204,55 @@ if __name__=="__main__":
 	trY[np.logical_and(trY>=0, B>=0)] = 2
 	trY[np.logical_and(trY<=0, B<0)] = 0
 	
-	#X = np.load('./dataset/Sequences_trX.npy')
-	#seqlen = np.load('./dataset/SequenceLenth_trX.npy')
-	#index_array = np.load('./dataset/SequenceIndexArray.npy')
+	X = np.load('./dataset/Sequences_trX.npy')
+	seqlen = np.load('./dataset/SequenceLenth_trX.npy')
+	index_array = np.load('./dataset/SequenceIndexArray.npy')
 	X = X.reshape([X.shape[0],X.shape[1],1])
 	
 	X = (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) - np.min(np.ndarray.flatten(X)))
 	
-	trX, trY = method3(X, seqlen, trX, trY, index_array)
-	np.save('./dataset/CAD_trX.npy', trX)
-	np.save('./dataset/CAD_trY.npy', trY)
+	nfeature_arr = [1,5,10]
+	n_steps_arr = [10,20,30]
 	
-	#trX = np.load('./dataset/CAD_trX.npy')
-	#trY = np.load('./dataset/CAD_trY.npy')
+	c = 0
+	fp = open('./log.txt', 'w')
+	for nfeatures in nfeature_arr:
+		for nstep in n_steps_arr:
+			c = c+1
+			print 'Run '+ str(c)
+			fp.write('************************************\n')
+			fp.write('Run: '+str(c)+'\n')
+			fp.write('Number of features: '+str(nfeatures)+'\n')
+			fp.write('Number of steps: '+str(nstep)+'\n')
+			
+			trX, trY, time_taken, mse = method3(X, seqlen, trX, trY, index_array, nfeatures, nstep)
+			fp.write('Time taken: '+str(time_taken)+'\n')
+			fp.write('Errors'+'\n')
+			fp.write(str(mse)+'\n')
+			
+			#np.save('./dataset/CAD_trX.npy', trX)
+			#np.save('./dataset/CAD_trY.npy', trY)
 	
-	print "Started training"
-	model = RandomForestClassifier(n_estimators=10)
-	#scores = cross_val_score(model,trX,trY,cv=5)
-	model.fit(trX,trY)
-	P = model.predict(trX)
-	print "Ended Training"
-	#print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
+			#trX = np.load('./dataset/CAD_trX.npy')
+			#trY = np.load('./dataset/CAD_trY.npy')
 	
-	compute_metrics(R,Bt,Btnxt,P)
+			print "Started training"
+			model = RandomForestClassifier(n_estimators=10)
+			#scores = cross_val_score(model,trX,trY,cv=5)
+			model.fit(trX,trY)
+			print "Ended Training"
+			P = model.predict(trX)
+	
+			#print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
+	
+			accuracies = compute_metrics(R,Bt,Btnxt,P)
+			
+			fp.write('Figure of merit: '+str(accuracies[0]) + '\n')
+			fp.write('Producer accuracy '+str(accuracies[1]) + '\n')
+			fp.write('User accuracy: '+str(accuracies[2]) + '\n')
+			fp.write('Overall accuracy: '+str(accuracies[3]) + '\n')
+			
+	fp.close()
 	
 	
 	
