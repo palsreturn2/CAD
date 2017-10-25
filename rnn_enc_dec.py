@@ -5,7 +5,8 @@ class DynamicRNNAE:
 	def __init__(self, sml = 53, nfeatures = 1, tsteps = 30):
 		# Parameters
 		tf.reset_default_graph()
-		self.learning_rate = 0.1
+		self.learning_rate = 0.9
+		self.momentum_rate = 0.1
 		self.training_steps = tsteps
 		self.batch_size = 100000
 		self.display_step = 200
@@ -49,27 +50,29 @@ class DynamicRNNAE:
 
 		mse = tf.losses.mean_squared_error(labels = self.x, predictions = self.outputs_dec) 
 		self.cost = tf.reduce_mean(mse)
-		self.optimizer = tf.train.GradientDescentOptimizer(learning_rate = self.learning_rate).minimize(self.cost)
-		
+		#self.optimizer = tf.train.GradientDescentOptimizer(learning_rate = self.learning_rate).minimize(self.cost)
+		self.optimizer = tf.train.MomentumOptimizer(learning_rate = self.learning_rate, momentum = self.momentum_rate, use_nesterov= True).minimize(self.cost)
 		self.sess = tf.Session()
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
 	
 	def run_dynamic_rnn(self, X, S):
-		#dec_output = self.rnn_decoder()
-		#enc_output = self.rnn_encoder()
 		mse = []
+		
 		for i in range(0,self.training_steps):
 			for j in range(0,X.shape[0], self.batch_size):
 				batch_x = X[j:min(j+self.batch_size, X.shape[0]),:,:]
 				batch_s = S[j:min(j+self.batch_size, S.shape[0])]				
 				self.sess.run(self.optimizer, feed_dict = {self.x: batch_x, self.seqlen: batch_s})
 			mse.append(self.sess.run(self.cost, feed_dict = {self.x: X, self.seqlen: S}))
+		
 		return mse
 	
 	def get_encoded_features(self, X, S):
 		return self.sess.run(self.outputs_enc, feed_dict={self.x: X, self.seqlen: S})
-		
+	
+	def get_decoded_features(self, X, S):
+		return self.sess.run(self.outputs_dec, feed_dict={self.x: X, self.seqlen: S})
 		
 if __name__ == '__main__':
 	rnn = DynamicRNNAE()

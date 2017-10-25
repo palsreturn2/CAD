@@ -18,6 +18,9 @@ from sklearn.externals import joblib
 from osgeo import ogr
 import rnn_enc_dec as RED
 import metrics
+from skimage import io
+import math
+from osgeo import gdal
 
 def select_classifier(trX,trY):
 	models = []
@@ -66,9 +69,6 @@ def method_fit(trX,trY,B, model):
 	#exit()
 	#sklearn.tree.export_graphviz(model, out_file = 'ca_Decision_tree.dot', max_depth=None)
 	return model
-
-cantor_pair_func = lambda k1,k2: (k1+k2)*(k1+k2+1)/2.0 + k2
-normalize = lambda X: (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) - np.min(np.ndarray.flatten(X)))
 	
 def method(Rx, res=1):
 	Rv = []
@@ -77,7 +77,7 @@ def method(Rx, res=1):
 	c=0
 	
 	max_point_count = 0
-	
+	cantor_pair_func = lambda k1,k2: (k1+k2)*(k1+k2+1)/2.0 + k2
 	for r in Rx:
 		for i in range(0, r.GetGeometryCount()):
 			for j in range(0, r.GetGeometryRef(i).GetPointCount()):
@@ -129,7 +129,7 @@ def method2(Sx, seqlen, trX, trY, index_array, feature_size=3):
 	
 	return trX_dash, trY_dash
 
-def method3(Sx, seqlen, trX, trY, index_array, feature_size = 1, nsteps = 10):
+def method3(R, Sx, seqlen, trX, trY, index_array, normc, feature_size = 1, nsteps = 10):
 	shp =trX.shape
 	
 	
@@ -139,7 +139,11 @@ def method3(Sx, seqlen, trX, trY, index_array, feature_size = 1, nsteps = 10):
 	mse = rnn_model.run_dynamic_rnn(Sx, seqlen)
 	end = time.time()
 	
+	print mse
 	
+	dec_features = rnn_model.get_decoded_features(Sx, seqlen)
+	method4(R, dec_features, seqlen, normc)
+	exit()
 	enc_features = rnn_model.get_encoded_features(Sx, seqlen)
 	
 	temp = []
@@ -155,6 +159,27 @@ def method3(Sx, seqlen, trX, trY, index_array, feature_size = 1, nsteps = 10):
 	print temp.shape
 	trX = np.concatenate([trX, temp], axis=1)
 	return trX, trY, end-start, mse
+
+def method4(R, X, S, normc):
+	X = X*(normc[1]-normc[0])-normc[0]
+	raster_ds = gdal.Open('/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/1991.tif')
+	f_w = lambda z: math.floor((math.sqrt(8*z+1)-1)/2)
+	f_t = lambda z: (f_w(z)*f_w(z) + f_w(z))/2
+	f_y = lambda z: z- f_t(z)
+	f_x = lambda z: f_w(z)-f_y(z)
+	H = np.zeros([R.shape[1], R.shape[2]])
+	for i in range(0,X.shape[0]):
+		for j in range(0,1):
+			z = X[i][j]
+			if z>=0:
+				[x,y] = [f_x(z), f_y(z)]
+				[row,col] = INPUT.coord2pixel(raster_ds, x, y)
+				#if(row>=0 and row<R.shape[1] and col>=0 and col<R.shape[2]):
+				H[row%R.shape[1]][col%R.shape[2]] = 1
+				
+	io.imsave("./dataset/debug2.png",np.transpose(H))
+	exit()
+	
 
 def compute_metrics(R, Bt, Btnxt, P):
 	shp = R.shape
@@ -209,7 +234,9 @@ if __name__=="__main__":
 	index_array = np.load('./dataset/SequenceIndexArray.npy')
 	X = X.reshape([X.shape[0],X.shape[1],1])
 	
-	X = (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) - np.min(np.ndarray.flatten(X)))
+	normc = [np.min(np.ndarray.flatten(X)), np.max(np.ndarray.flatten(X))] 
+	
+	X = (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) + np.min(np.ndarray.flatten(X)))
 	
 	nfeature_arr = [1,5,10]
 	n_steps_arr = [10,20,30]
@@ -225,7 +252,7 @@ if __name__=="__main__":
 			fp.write('Number of features: '+str(nfeatures)+'\n')
 			fp.write('Number of steps: '+str(nstep)+'\n')
 			
-			trX, trY, time_taken, mse = method3(X, seqlen, trX, trY, index_array, nfeatures, nstep)
+			trX, trY, time_taken, mse = method3(R, X, seqlen, trX, trY, index_array, normc, nfeatures, nstep)
 			fp.write('Time taken: '+str(time_taken)+'\n')
 			fp.write('Errors'+'\n')
 			fp.write(str(mse)+'\n')
