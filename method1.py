@@ -16,7 +16,8 @@ from sklearn.neighbors import KNeighborsClassifier
 import time
 from sklearn.externals import joblib
 from osgeo import ogr
-import rnn_enc_dec as RED
+#import rnn_enc_dec as RED
+import spatial_drnnae as SDRNN
 import metrics
 from skimage import io
 import math
@@ -77,7 +78,7 @@ def method(Rx, res=1):
 	c=0
 	
 	max_point_count = 0
-	cantor_pair_func = lambda k1,k2: (k1+k2)*(k1+k2+1)/2.0 + k2
+	cantor_pair_func = lambda k1,k2: (k1+k2)*(k1+k2+1)/2 + k2
 	for r in Rx:
 		for i in range(0, r.GetGeometryCount()):
 			for j in range(0, r.GetGeometryRef(i).GetPointCount()):
@@ -129,22 +130,22 @@ def method2(Sx, seqlen, trX, trY, index_array, feature_size=3):
 	
 	return trX_dash, trY_dash
 
-def method3(R, Sx, seqlen, trX, trY, index_array, normc, feature_size = 1, nsteps = 10):
+def method3(R, Sx, Sy, seqlen, trX, trY, index_array, normc_x, normc_y, feature_size = 1, nsteps = 10):
 	shp =trX.shape
 	
 	
-	rnn_model = RED.DynamicRNNAE(nfeatures = feature_size, tsteps = nsteps)
+	rnn_model = SDRNN.DynamicRNNAE(nfeatures = feature_size, tsteps = nsteps)
 	
 	start = time.time()
-	mse = rnn_model.run_dynamic_rnn(Sx, seqlen)
+	mse = rnn_model.run_dynamic_rnn(Sx, Sy, seqlen)
 	end = time.time()
 	
 	print mse
 	
-	dec_features = rnn_model.get_decoded_features(Sx, seqlen)
-	method4(R, dec_features, seqlen, normc)
+	dec_features_x, dec_features_y = rnn_model.get_decoded_features(Sx, Sy, seqlen)
+	method4(R, Sx, Sy, dec_features_x, dec_features_y, seqlen, normc_x, normc_y)
 	exit()
-	enc_features = rnn_model.get_encoded_features(Sx, seqlen)
+	enc_features = rnn_model.get_encoded_features(Sx, Sy, seqlen)
 	
 	temp = []
 	c = 0
@@ -160,26 +161,58 @@ def method3(R, Sx, seqlen, trX, trY, index_array, normc, feature_size = 1, nstep
 	trX = np.concatenate([trX, temp], axis=1)
 	return trX, trY, end-start, mse
 
-def method4(R, X, S, normc):
-	X = X*(normc[1]-normc[0])-normc[0]
+def method4(R, Sx, Sy, X, Y, S, normc_x, normc_y):
+	X = X*(normc_x[1]-normc_x[0])+normc_x[0]
+	Y = Y*(normc_y[1]-normc_y[0])+normc_y[0]
 	raster_ds = gdal.Open('/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/1991.tif')
-	f_w = lambda z: math.floor((math.sqrt(8*z+1)-1)/2)
-	f_t = lambda z: (f_w(z)*f_w(z) + f_w(z))/2
-	f_y = lambda z: z- f_t(z)
-	f_x = lambda z: f_w(z)-f_y(z)
+	#f_w = lambda z: math.floor((math.sqrt(8*z+1)-1)/2)
+	#f_t = lambda z: (f_w(z)*f_w(z) + f_w(z))/2
+	#f_y = lambda z: z- f_t(z)
+	#f_x = lambda z: f_w(z)-f_y(z)
 	H = np.zeros([R.shape[1], R.shape[2]])
 	for i in range(0,X.shape[0]):
 		for j in range(0,1):
-			z = X[i][j]
-			if z>=0:
-				[x,y] = [f_x(z), f_y(z)]
-				[row,col] = INPUT.coord2pixel(raster_ds, x, y)
-				#if(row>=0 and row<R.shape[1] and col>=0 and col<R.shape[2]):
-				H[row%R.shape[1]][col%R.shape[2]] = 1
+			#z = X[i][j]
+			#print math.fabs(z) - math.fabs(Sx[i][j])
+			#if z>=0:
+			#[x,y] = [f_x(z), f_y(z)]
+			[row,col] = INPUT.coord2pixel(raster_ds, X[i][j], Y[i][j])
+			#if(row>=0 and row<R.shape[1] and col>=0 and col<R.shape[2]):
+			H[row%R.shape[1]][col%R.shape[2]] = 1
 				
 	io.imsave("./dataset/debug2.png",np.transpose(H))
 	exit()
+
+def method5(Rx, res=1):
+	Rv_x = []
+	Rv_y = []
+	seqlen = []
+	index_array = []
+	c=0
 	
+	max_point_count = 0
+	for r in Rx:
+		for i in range(0, r.GetGeometryCount()):
+			for j in range(0, r.GetGeometryRef(i).GetPointCount()):
+				max_point_count = max(r.GetGeometryRef(i).GetPointCount(), max_point_count)
+	
+	for k in range(0,Rx.shape[0]):
+		r = Rx[k]
+		if r.GetGeometryCount()>0:
+			index_array.append([k,r.GetGeometryCount()])
+		for i in range(0,r.GetGeometryCount()):
+			x_train = np.zeros(max_point_count)
+			y_train = np.zeros(max_point_count)
+			for j in range(0,r.GetGeometryRef(i).GetPointCount()):
+				x_train[j] = r.GetGeometryRef(i).GetPoint(i)[0]
+				y_train[j] = r.GetGeometryRef(i).GetPoint(i)[1]
+				
+			Rv_x.append(x_train)
+			Rv_y.append(y_train)
+			seqlen.append(r.GetGeometryRef(i).GetPointCount())
+	
+	print max_point_count
+	return np.array(Rv_x), np.array(Rv_y), np.array(seqlen), np.array(index_array)	
 
 def compute_metrics(R, Bt, Btnxt, P):
 	shp = R.shape
@@ -211,10 +244,15 @@ if __name__=="__main__":
 	R = INPUT.give_raster(raw_loc + '1991.tif')
 	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
 	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
-	#Rx = np.load('./dataset/Road_trX.npy')
+	Rx = np.load('./dataset/Road_trX.npy')
 	
 	#X, seqlen, index_array = method(Rx)
-
+	
+	#X, Y, seqlen, index_array = method5(Rx)
+	
+	#np.save('./dataset/Sequences_X.npy',X)
+	#np.save('./dataset/Sequences_Y.npy',Y)
+	
 	#np.save('./dataset/Sequences_trX.npy',X)
 	#np.save('./dataset/SequenceLenth_trX.npy', seqlen)
 	#np.save('./dataset/SequenceIndexArray.npy', index_array)
@@ -229,14 +267,19 @@ if __name__=="__main__":
 	trY[np.logical_and(trY>=0, B>=0)] = 2
 	trY[np.logical_and(trY<=0, B<0)] = 0
 	
-	X = np.load('./dataset/Sequences_trX.npy')
+	#X = np.load('./dataset/Sequences_trX.npy')
+	X = np.load('./dataset/Sequences_X.npy')
+	Y = np.load('./dataset/Sequences_Y.npy')
 	seqlen = np.load('./dataset/SequenceLenth_trX.npy')
 	index_array = np.load('./dataset/SequenceIndexArray.npy')
 	X = X.reshape([X.shape[0],X.shape[1],1])
+	Y = Y.reshape([Y.shape[0],Y.shape[1],1])
 	
-	normc = [np.min(np.ndarray.flatten(X)), np.max(np.ndarray.flatten(X))] 
+	normc_x = [np.min(np.ndarray.flatten(X)), np.max(np.ndarray.flatten(X))] 
+	normc_y = [np.min(np.ndarray.flatten(Y)), np.max(np.ndarray.flatten(Y))] 
 	
 	X = (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) + np.min(np.ndarray.flatten(X)))
+	Y = (Y - np.min(np.ndarray.flatten(Y)))/(np.max(np.ndarray.flatten(Y)) + np.min(np.ndarray.flatten(Y)))
 	
 	nfeature_arr = [1,5,10]
 	n_steps_arr = [10,20,30]
@@ -252,7 +295,7 @@ if __name__=="__main__":
 			fp.write('Number of features: '+str(nfeatures)+'\n')
 			fp.write('Number of steps: '+str(nstep)+'\n')
 			
-			trX, trY, time_taken, mse = method3(R, X, seqlen, trX, trY, index_array, normc, nfeatures, nstep)
+			trX, trY, time_taken, mse = method3(R, X, Y, seqlen, trX, trY, index_array, normc_x, normc_y, nfeatures, nstep)
 			fp.write('Time taken: '+str(time_taken)+'\n')
 			fp.write('Errors'+'\n')
 			fp.write(str(mse)+'\n')

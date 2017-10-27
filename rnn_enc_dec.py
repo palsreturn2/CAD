@@ -59,6 +59,18 @@ class DynamicRNNAE:
 	def run_dynamic_rnn(self, X, S):
 		mse = []
 		
+		X_part = X[S>=30]
+		S_part = S[S>=30]
+		
+		for i in range(0,100):
+			self.sess.run(self.optimizer, feed_dict = {self.x: X_part, self.seqlen: S_part})
+		
+		X_part = X[S==20]
+		S_part = S[S==20]
+		
+		for i in range(0,100):
+			self.sess.run(self.optimizer, feed_dict = {self.x: X_part, self.seqlen: S_part})
+		
 		for i in range(0,self.training_steps):
 			for j in range(0,X.shape[0], self.batch_size):
 				batch_x = X[j:min(j+self.batch_size, X.shape[0]),:,:]
