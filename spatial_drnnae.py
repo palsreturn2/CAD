@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 class DynamicRNNAE:
-	def __init__(self, sml = 53, nfeatures = 1, tsteps = 30):
+	def __init__(self, sml = 18, nfeatures = 1, tsteps = 30):
 		# Parameters
 		tf.reset_default_graph()
 		self.learning_rate = 0.9
@@ -72,35 +72,46 @@ class DynamicRNNAE:
 		
 		self.outputs_dec_y = tf.stack(self.outputs_dec_y)
 		self.outputs_dec_y = tf.transpose(self.outputs_dec_y, [1, 0, 2])
-
-		mse = tf.losses.mean_squared_error(labels = self.x, predictions = self.outputs_dec_x) + tf.losses.mean_squared_error(labels = self.y, predictions = self.outputs_dec_y) 
+		
+		m1 = tf.losses.mean_squared_error(labels = self.x, predictions = self.outputs_dec_x)
+		m2 = tf.losses.mean_squared_error(labels = self.y, predictions = self.outputs_dec_y) 
+		mse = tf.sqrt(tf.square(m1) + tf.square(m2))
 		self.cost = tf.reduce_mean(mse)
 		#self.optimizer = tf.train.GradientDescentOptimizer(learning_rate = self.learning_rate).minimize(self.cost)
-		self.optimizer = tf.train.MomentumOptimizer(learning_rate = self.learning_rate, momentum = self.momentum_rate, use_nesterov= True).minimize(self.cost)
+		self.optimizer_x = tf.train.MomentumOptimizer(learning_rate = self.learning_rate, momentum = self.momentum_rate, use_nesterov= True).minimize(tf.reduce_mean(m1))
+		self.optimizer_y = tf.train.MomentumOptimizer(learning_rate = self.learning_rate, momentum = self.momentum_rate, use_nesterov= True).minimize(tf.reduce_mean(m2))
 		self.sess = tf.Session()
+		self.saver = tf.train.Saver()
+
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
 	
 	def run_dynamic_rnn(self, X, Y, S):
 		mse = []
 		
-		X_part = X[S>=30]
-		Y_part = Y[S>=30]
-		S_part = S[S>=30]
+		X_part = X[S>=10]
+		Y_part = Y[S>=10]
+		S_part = S[S>=10]
 		
-		for i in range(0,500):
-			self.sess.run(self.optimizer, feed_dict = {self.x: X_part, self.y: Y_part, self.seqlen: S_part})
+		for i in range(0,200):
+			self.sess.run(self.optimizer_x, feed_dict = {self.x: X_part, self.seqlen: S_part})
+			self.sess.run(self.optimizer_y, feed_dict = {self.y: Y_part, self.seqlen: S_part})
+			if(i%100==0):
+				e = self.sess.run(self.cost, feed_dict = {self.x: X, self.y: Y, self.seqlen: S})
+				print e 
+				mse.append(e)
 		
 		for i in range(0,self.training_steps):
 			for j in range(0,X.shape[0], self.batch_size):
 				batch_x = X[j:min(j+self.batch_size, X.shape[0]),:,:]
 				batch_y = Y[j:min(j+self.batch_size, Y.shape[0]),:,:]
 				batch_s = S[j:min(j+self.batch_size, S.shape[0])]				
-				self.sess.run(self.optimizer, feed_dict = {self.x: batch_x, self.y: batch_y, self.seqlen: batch_s})
+				self.sess.run(self.optimizer_x, feed_dict = {self.x: batch_x, self.seqlen: batch_s})
+				self.sess.run(self.optimizer_y, feed_dict = {self.y: batch_y, self.seqlen: batch_s})
 			e = self.sess.run(self.cost, feed_dict = {self.x: X, self.y: Y, self.seqlen: S})
-			#print e 
+			print e 
 			mse.append(e)
-		
+		#self.saver.save(self.sess, "./dataset/SDRNNAE.ckpt")
 		return mse
 	
 	def get_encoded_features(self, X, Y, S):

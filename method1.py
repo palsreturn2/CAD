@@ -133,31 +133,34 @@ def method2(Sx, seqlen, trX, trY, index_array, feature_size=3):
 def method3(R, Sx, Sy, seqlen, trX, trY, index_array, normc_x, normc_y, feature_size = 1, nsteps = 10):
 	shp =trX.shape
 	
-	
 	rnn_model = SDRNN.DynamicRNNAE(nfeatures = feature_size, tsteps = nsteps)
 	
 	start = time.time()
 	mse = rnn_model.run_dynamic_rnn(Sx, Sy, seqlen)
 	end = time.time()
 	
-	print mse
-	
 	dec_features_x, dec_features_y = rnn_model.get_decoded_features(Sx, Sy, seqlen)
-	method4(R, Sx, Sy, dec_features_x, dec_features_y, seqlen, normc_x, normc_y)
-	exit()
-	enc_features = rnn_model.get_encoded_features(Sx, Sy, seqlen)
 	
+	#print zip(Sx[0], dec_features_x[0])
+	
+	
+	#method4(R, Sx, Sy, dec_features_x, dec_features_y, seqlen, normc_x, normc_y)
+	#exit()
+	enc_features = rnn_model.get_encoded_features(Sx, Sy, seqlen)
 	temp = []
+	k = 0
 	c = 0
 	for i in range(0,shp[0]):
-		if i in index_array[:,0]:
-			k = np.where(index_array[:,0]==i)
+		if k<index_array.shape[0] and i==index_array[k,0]:
+			#k = np.where(index_array[c:,0]==i)
 			temp.append(np.mean(enc_features[c:c+index_array[k,1]], axis=0))
 			c = c+index_array[k,1]
+			k = k+1
 		else:
-			temp.append(np.zeros(feature_size))
+			temp.append(np.zeros(feature_size*2))
 	temp = np.array(temp)
-	print temp.shape
+	
+			
 	trX = np.concatenate([trX, temp], axis=1)
 	return trX, trY, end-start, mse
 
@@ -189,7 +192,7 @@ def method5(Rx, res=1):
 	seqlen = []
 	index_array = []
 	c=0
-	
+			
 	max_point_count = 0
 	for r in Rx:
 		for i in range(0, r.GetGeometryCount()):
@@ -200,18 +203,18 @@ def method5(Rx, res=1):
 		r = Rx[k]
 		if r.GetGeometryCount()>0:
 			index_array.append([k,r.GetGeometryCount()])
-		for i in range(0,r.GetGeometryCount()):
-			x_train = np.zeros(max_point_count)
-			y_train = np.zeros(max_point_count)
-			for j in range(0,r.GetGeometryRef(i).GetPointCount()):
-				x_train[j] = r.GetGeometryRef(i).GetPoint(i)[0]
-				y_train[j] = r.GetGeometryRef(i).GetPoint(i)[1]
+			for i in range(0,r.GetGeometryCount()):
+				x_train = np.zeros(max_point_count)
+				y_train = np.zeros(max_point_count)
+				for j in range(0,r.GetGeometryRef(i).GetPointCount()):
+					x_train[j] = r.GetGeometryRef(i).GetPoint(j)[0]
+					y_train[j] = r.GetGeometryRef(i).GetPoint(j)[1]
 				
-			Rv_x.append(x_train)
-			Rv_y.append(y_train)
-			seqlen.append(r.GetGeometryRef(i).GetPointCount())
+				Rv_x.append(x_train)
+				Rv_y.append(y_train)
+				seqlen.append(r.GetGeometryRef(i).GetPointCount())
 	
-	print max_point_count
+	print max_point_count, len(Rv_x)
 	return np.array(Rv_x), np.array(Rv_y), np.array(seqlen), np.array(index_array)	
 
 def compute_metrics(R, Bt, Btnxt, P):
@@ -248,14 +251,14 @@ if __name__=="__main__":
 	
 	#X, seqlen, index_array = method(Rx)
 	
-	#X, Y, seqlen, index_array = method5(Rx)
+	X, Y, seqlen, index_array = method5(Rx)
 	
-	#np.save('./dataset/Sequences_X.npy',X)
-	#np.save('./dataset/Sequences_Y.npy',Y)
+	np.save('./dataset/Sequences_X.npy',X)
+	np.save('./dataset/Sequences_Y.npy',Y)
 	
 	#np.save('./dataset/Sequences_trX.npy',X)
-	#np.save('./dataset/SequenceLenth_trX.npy', seqlen)
-	#np.save('./dataset/SequenceIndexArray.npy', index_array)
+	np.save('./dataset/SequenceLenth_trX.npy', seqlen)
+	np.save('./dataset/SequenceIndexArray.npy', index_array)
 	
 	trX = np.load('./dataset/DCAP_trX.npy')
 	trX = trX.reshape([trX.shape[0],-1])
@@ -281,12 +284,13 @@ if __name__=="__main__":
 	X = (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) + np.min(np.ndarray.flatten(X)))
 	Y = (Y - np.min(np.ndarray.flatten(Y)))/(np.max(np.ndarray.flatten(Y)) + np.min(np.ndarray.flatten(Y)))
 	
-	nfeature_arr = [1,5,10]
-	n_steps_arr = [10,20,30]
+	nfeature_arr = [1,2,3,4,5]
+	n_steps_arr = [10,20,30,40]
 	
 	c = 0
-	fp = open('./log.txt', 'w')
+	
 	for nfeatures in nfeature_arr:
+		fp = open('./log.txt', 'a')
 		for nstep in n_steps_arr:
 			c = c+1
 			print 'Run '+ str(c)
@@ -306,6 +310,7 @@ if __name__=="__main__":
 			#trX = np.load('./dataset/CAD_trX.npy')
 			#trY = np.load('./dataset/CAD_trY.npy')
 	
+			print trX.shape
 			print "Started training"
 			model = RandomForestClassifier(n_estimators=10)
 			#scores = cross_val_score(model,trX,trY,cv=5)
@@ -321,9 +326,8 @@ if __name__=="__main__":
 			fp.write('Producer accuracy '+str(accuracies[1]) + '\n')
 			fp.write('User accuracy: '+str(accuracies[2]) + '\n')
 			fp.write('Overall accuracy: '+str(accuracies[3]) + '\n')
-			
-	fp.close()
-	
+		fp.close()
+	print "Program terminated.."
 	
 	
 	

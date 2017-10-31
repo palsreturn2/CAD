@@ -76,11 +76,8 @@ def cad_dataset_vector(raster_ds ,vector_ds , wx, wy):
 		geom = feature.GetGeometryRef()
 		if geom.GetGeometryCount()==0:
 			for i in range(0,geom.GetPointCount()-1):
-				
 				start_row, start_col = INPUT.coord2pixel(raster_ds, geom.GetPoint(i)[0], geom.GetPoint(i)[1])
 				end_row, end_col = INPUT.coord2pixel(raster_ds, geom.GetPoint(i+1)[0], geom.GetPoint(i+1)[1])
-				
-					
 				if start_row<=end_row:
 					H = func_populate_H(start_row, start_col, end_row, end_col, H, feature)
 				elif start_row>end_row:
@@ -108,8 +105,9 @@ def cad_dataset_vector(raster_ds ,vector_ds , wx, wy):
 	for i in range(0,row):
 		for j in range(0,col):
 			if len(H[i][j])!=0:
-				I[i][j] = 255
+				I[i][j] = 1
 				c = c+1
+	io.imsave('./dataset/debug.png', np.transpose(I))
 	c = 0 
 	for i in range(0,row):
 		for j in range(0,col):

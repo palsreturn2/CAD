@@ -44,10 +44,10 @@ def create_window(raster,posx,posy,sx,sy):
 	return window
 
 def create_vector_window(raster_ds, posx, posy, sx, sy, H):
-	x,y = pixel2coord(raster_ds, posx, posy)
+	
 	c, a, b, f, d, e = raster_ds.GetGeoTransform()
-	winx = (sx+0.5)*a
-	winy = (sy+0.5)*e
+	winx = 0.5*a
+	winy = 0.5*e
 	
 	row = len(H)
 	col = len(H[0])
@@ -55,12 +55,14 @@ def create_vector_window(raster_ds, posx, posy, sx, sy, H):
 	
 	multiline = ogr.Geometry(ogr.wkbMultiLineString)
 	
-	wkt = "POLYGON (("+str(x-winx if x-winx>=0 else 0)+" "+str(y-winy if y-winy>=0 else 0)+","+str(x-winx if x-winx>=0 else 0)+" "+str(y+winy)+","+str(x+winx)+" "+str(y+winy)+","+str(x+winx)+" "+str(y-winy if y-winy>=0 else 0)+","+str(x-winx if x-winx>=0 else 0)+" "+str(y-winy if y-winy>=0 else 0)+"))"
-
-	ring = ogr.CreateGeometryFromWkt(wkt)
+	
 	for i in range(posx-sx, posx+sx+1):
 		for j in range(posy-sy, posy+sy+1):
 			if i>=0 and i<row and j>=0 and j<col:
+				x,y = pixel2coord(raster_ds, i, j)
+				wkt = "POLYGON (("+str(x-winx if x-winx>=0 else 0)+" "+str(y-winy if y-winy>=0 else 0)+","+str(x-winx if x-winx>=0 else 0)+" "+str(y+winy)+","+str(x+winx)+" "+str(y+winy)+","+str(x+winx)+" "+str(y-winy if y-winy>=0 else 0)+","+str(x-winx if x-winx>=0 else 0)+" "+str(y-winy if y-winy>=0 else 0)+"))"
+
+				ring = ogr.CreateGeometryFromWkt(wkt)
 				for f in H[i][j]:								
 					g = f.GetGeometryRef()
 					if g.GetGeometryCount()==0:
