@@ -133,18 +133,24 @@ def method2(Sx, seqlen, trX, trY, index_array, feature_size=3):
 def method3(R, Sx, Sy, seqlen, trX, trY, index_array, normc_x, normc_y, feature_size = 1, nsteps = 10):
 	shp =trX.shape
 	
-	rnn_model = SDRNN.DynamicRNNAE(nfeatures = feature_size, tsteps = nsteps)
+	rnn_model = SDRNN.DynamicRNNAE(nfeatures = feature_size, tsteps = nsteps, sml = 18)
+	
+	Sx = Sx[seqlen>=15]
+	Sy = Sy[seqlen>=15]
+	seqlen = seqlen[seqlen>=15]
 	
 	start = time.time()
-	mse = rnn_model.run_dynamic_rnn(Sx, Sy, seqlen)
+	#mse = rnn_model.run_dynamic_rnn(Sx, Sy, seqlen)
 	end = time.time()
 	
 	dec_features_x, dec_features_y = rnn_model.get_decoded_features(Sx, Sy, seqlen)
 	
 	#print zip(Sx[0], dec_features_x[0])
+	print dec_features_x[0]
+	print dec_features_x[1]
+	print dec_features_x[2]
 	
-	
-	#method4(R, Sx, Sy, dec_features_x, dec_features_y, seqlen, normc_x, normc_y)
+	method4(R, Sx, Sy, dec_features_x, dec_features_y, seqlen, normc_x, normc_y)
 	#exit()
 	enc_features = rnn_model.get_encoded_features(Sx, Sy, seqlen)
 	temp = []
@@ -167,7 +173,7 @@ def method3(R, Sx, Sy, seqlen, trX, trY, index_array, normc_x, normc_y, feature_
 def method4(R, Sx, Sy, X, Y, S, normc_x, normc_y):
 	X = X*(normc_x[1]-normc_x[0])+normc_x[0]
 	Y = Y*(normc_y[1]-normc_y[0])+normc_y[0]
-	raster_ds = gdal.Open('/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/1991.tif')
+	raster_ds = gdal.Open('/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/2001.tif')
 	#f_w = lambda z: math.floor((math.sqrt(8*z+1)-1)/2)
 	#f_t = lambda z: (f_w(z)*f_w(z) + f_w(z))/2
 	#f_y = lambda z: z- f_t(z)
@@ -244,21 +250,21 @@ if __name__=="__main__":
 	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
 	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/mumbai/'
 	
-	R = INPUT.give_raster(raw_loc + '1991.tif')
-	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
-	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
+	R = INPUT.give_raster(raw_loc + '2001.tif')
+	Bt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
+	Btnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
 	Rx = np.load('./dataset/Road_trX.npy')
 	
 	#X, seqlen, index_array = method(Rx)
 	
-	X, Y, seqlen, index_array = method5(Rx)
+	#X, Y, seqlen, index_array = method5(Rx)
 	
-	np.save('./dataset/Sequences_X.npy',X)
-	np.save('./dataset/Sequences_Y.npy',Y)
+	#np.save('./dataset/Sequences_X.npy',X)
+	#np.save('./dataset/Sequences_Y.npy',Y)
 	
 	#np.save('./dataset/Sequences_trX.npy',X)
-	np.save('./dataset/SequenceLenth_trX.npy', seqlen)
-	np.save('./dataset/SequenceIndexArray.npy', index_array)
+	#np.save('./dataset/SequenceLenth_trX.npy', seqlen)
+	#np.save('./dataset/SequenceIndexArray.npy', index_array)
 	
 	trX = np.load('./dataset/DCAP_trX.npy')
 	trX = trX.reshape([trX.shape[0],-1])

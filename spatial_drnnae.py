@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+from pretrain_lstm import MyLSTMCell
 
 class DynamicRNNAE:
 	def __init__(self, sml = 18, nfeatures = 1, tsteps = 30):
@@ -28,11 +29,11 @@ class DynamicRNNAE:
 		y_list = tf.unstack(self.y, self.seq_max_len, 1)
 		
 		with tf.variable_scope('lstm1_x'):
-			encoder_x = tf.contrib.rnn.BasicLSTMCell(self.n_hidden)
+			encoder_x = MyLSTMCell(self.n_hidden)
 			self.outputs_enc_x, states = tf.contrib.rnn.static_rnn(encoder_x, x_list, dtype=tf.float32, sequence_length = self.seqlen)
 		
 		with tf.variable_scope('lstm1_y'):
-			encoder_y = tf.contrib.rnn.BasicLSTMCell(self.n_hidden)
+			encoder_y = MyLSTMCell(self.n_hidden)
 			self.outputs_enc_y, states = tf.contrib.rnn.static_rnn(encoder_y, y_list, dtype=tf.float32, sequence_length = self.seqlen)
 		
 		#Encoded features of x
@@ -60,11 +61,11 @@ class DynamicRNNAE:
 		enc_rep_y = tf.unstack(enc_rep_y, self.seq_max_len, 1)
 		
 		with tf.variable_scope('lstm2_x'):
-			decoder_x = tf.contrib.rnn.BasicLSTMCell(1)
+			decoder_x = MyLSTMCell(1)
 			self.outputs_dec_x, states = tf.contrib.rnn.static_rnn(decoder_x, enc_rep_x, dtype=tf.float32, sequence_length=self.seqlen)
 		
 		with tf.variable_scope('lstm2_y'):		
-			decoder_y = tf.contrib.rnn.BasicLSTMCell(1)
+			decoder_y = MyLSTMCell(1)
 			self.outputs_dec_y, states = tf.contrib.rnn.static_rnn(decoder_y, enc_rep_y, dtype=tf.float32, sequence_length=self.seqlen)
 		
 		self.outputs_dec_x = tf.stack(self.outputs_dec_x)
@@ -77,14 +78,16 @@ class DynamicRNNAE:
 		m2 = tf.losses.mean_squared_error(labels = self.y, predictions = self.outputs_dec_y) 
 		mse = tf.sqrt(tf.square(m1) + tf.square(m2))
 		self.cost = tf.reduce_mean(mse)
-		#self.optimizer = tf.train.GradientDescentOptimizer(learning_rate = self.learning_rate).minimize(self.cost)
-		self.optimizer_x = tf.train.MomentumOptimizer(learning_rate = self.learning_rate, momentum = self.momentum_rate, use_nesterov= True).minimize(tf.reduce_mean(m1))
-		self.optimizer_y = tf.train.MomentumOptimizer(learning_rate = self.learning_rate, momentum = self.momentum_rate, use_nesterov= True).minimize(tf.reduce_mean(m2))
+		self.optimizer_x = tf.train.GradientDescentOptimizer(learning_rate = self.learning_rate).minimize(m1)
+		self.optimizer_y = tf.train.GradientDescentOptimizer(learning_rate = self.learning_rate).minimize(m2)
+		#self.optimizer_x = tf.train.MomentumOptimizer(learning_rate = self.learning_rate, momentum = self.momentum_rate, use_nesterov= True).minimize(tf.reduce_mean(m1))
+		#self.optimizer_y = tf.train.MomentumOptimizer(learning_rate = self.learning_rate, momentum = self.momentum_rate, use_nesterov= True).minimize(tf.reduce_mean(m2))
 		self.sess = tf.Session()
 		self.saver = tf.train.Saver()
 
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
+	
 	
 	def run_dynamic_rnn(self, X, Y, S):
 		mse = []
@@ -93,7 +96,7 @@ class DynamicRNNAE:
 		Y_part = Y[S>=10]
 		S_part = S[S>=10]
 		
-		for i in range(0,200):
+		for i in range(0,1000):
 			self.sess.run(self.optimizer_x, feed_dict = {self.x: X_part, self.seqlen: S_part})
 			self.sess.run(self.optimizer_y, feed_dict = {self.y: Y_part, self.seqlen: S_part})
 			if(i%100==0):

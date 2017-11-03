@@ -234,7 +234,7 @@ if __name__ == "__main__":
 	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
 	Rx = INPUT.give_raster('/home/ubuntu/workplace/saptarshi/Data/roads/mumbai/roadsMumbai.tif')
 	
-	#R = np.concatenate([R,Rx], axis=0)
+	R = np.concatenate([R,Rx], axis=0)
 	
 	'''R = R[:,286:783,345:802]
 	Bt = Bt[286:783,345:802]
