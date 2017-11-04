@@ -1,6 +1,8 @@
 import tensorflow as tf
 import numpy as np
 from pretrain_lstm import MyLSTMCell
+from tensorflow.contrib.rnn import BasicLSTMCell
+from tensorflow.contrib.rnn import BasicRNNCell
 
 class DynamicRNNAE:
 	def __init__(self, sml = 18, nfeatures = 1, tsteps = 30):
@@ -29,11 +31,11 @@ class DynamicRNNAE:
 		y_list = tf.unstack(self.y, self.seq_max_len, 1)
 		
 		with tf.variable_scope('lstm1_x'):
-			encoder_x = MyLSTMCell(self.n_hidden)
+			encoder_x = BasicLSTMCell(self.n_hidden)
 			self.outputs_enc_x, states = tf.contrib.rnn.static_rnn(encoder_x, x_list, dtype=tf.float32, sequence_length = self.seqlen)
 		
 		with tf.variable_scope('lstm1_y'):
-			encoder_y = MyLSTMCell(self.n_hidden)
+			encoder_y = BasicLSTMCell(self.n_hidden)
 			self.outputs_enc_y, states = tf.contrib.rnn.static_rnn(encoder_y, y_list, dtype=tf.float32, sequence_length = self.seqlen)
 		
 		#Encoded features of x
@@ -61,18 +63,30 @@ class DynamicRNNAE:
 		enc_rep_y = tf.unstack(enc_rep_y, self.seq_max_len, 1)
 		
 		with tf.variable_scope('lstm2_x'):
-			decoder_x = MyLSTMCell(1)
+			decoder_x = BasicLSTMCell(1)
 			self.outputs_dec_x, states = tf.contrib.rnn.static_rnn(decoder_x, enc_rep_x, dtype=tf.float32, sequence_length=self.seqlen)
 		
 		with tf.variable_scope('lstm2_y'):		
-			decoder_y = MyLSTMCell(1)
+			decoder_y = BasicLSTMCell(1)
 			self.outputs_dec_y, states = tf.contrib.rnn.static_rnn(decoder_y, enc_rep_y, dtype=tf.float32, sequence_length=self.seqlen)
-		
+			
+		#Reconstruction of x coordinates
 		self.outputs_dec_x = tf.stack(self.outputs_dec_x)
 		self.outputs_dec_x = tf.transpose(self.outputs_dec_x, [1, 0, 2])
+		#batch_size_x = tf.shape(self.outputs_dec_x)[0]
+		#index_x = tf.range(0, batch_size_x) * self.seq_max_len + (self.seqlen - 1)
+		#self.outputs_dec_x = tf.gather(tf.reshape(self.outputs_dec_x, [-1, sml]), index_x)
+		w_rx = tf.Variable(tf.random_normal([1]))
+		self.outputs_dec_x = tf.multiply(self.outputs_dec_x, w_rx)
 		
+		#Recontruction of y coordinates
 		self.outputs_dec_y = tf.stack(self.outputs_dec_y)
 		self.outputs_dec_y = tf.transpose(self.outputs_dec_y, [1, 0, 2])
+		#batch_size_x = tf.shape(self.outputs_dec_y)[0]
+		#index_x = tf.range(0, batch_size_x) * self.seq_max_len + (self.seqlen - 1)
+		#self.outputs_dec_y = tf.gather(tf.reshape(self.outputs_dec_y, [-1, sml]), index_x)
+		w_ry = tf.Variable(tf.random_normal([1]))
+		self.outputs_dec_y = tf.multiply(self.outputs_dec_y, w_ry)
 		
 		m1 = tf.losses.mean_squared_error(labels = self.x, predictions = self.outputs_dec_x)
 		m2 = tf.losses.mean_squared_error(labels = self.y, predictions = self.outputs_dec_y) 
@@ -96,7 +110,7 @@ class DynamicRNNAE:
 		Y_part = Y[S>=10]
 		S_part = S[S>=10]
 		
-		for i in range(0,1000):
+		for i in range(0,500):
 			self.sess.run(self.optimizer_x, feed_dict = {self.x: X_part, self.seqlen: S_part})
 			self.sess.run(self.optimizer_y, feed_dict = {self.y: Y_part, self.seqlen: S_part})
 			if(i%100==0):

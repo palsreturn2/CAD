@@ -135,22 +135,19 @@ def method3(R, Sx, Sy, seqlen, trX, trY, index_array, normc_x, normc_y, feature_
 	
 	rnn_model = SDRNN.DynamicRNNAE(nfeatures = feature_size, tsteps = nsteps, sml = 18)
 	
-	Sx = Sx[seqlen>=15]
-	Sy = Sy[seqlen>=15]
-	seqlen = seqlen[seqlen>=15]
+	#Sx = Sx[seqlen>=15]
+	#Sy = Sy[seqlen>=15]
+	#seqlen = seqlen[seqlen>=15]
 	
 	start = time.time()
-	#mse = rnn_model.run_dynamic_rnn(Sx, Sy, seqlen)
+	mse = rnn_model.run_dynamic_rnn(Sx, Sy, seqlen)
 	end = time.time()
 	
-	dec_features_x, dec_features_y = rnn_model.get_decoded_features(Sx, Sy, seqlen)
+	#dec_features_x, dec_features_y = rnn_model.get_decoded_features(Sx, Sy, seqlen)
 	
 	#print zip(Sx[0], dec_features_x[0])
-	print dec_features_x[0]
-	print dec_features_x[1]
-	print dec_features_x[2]
 	
-	method4(R, Sx, Sy, dec_features_x, dec_features_y, seqlen, normc_x, normc_y)
+	#method4(R, Sx, Sy, dec_features_x, dec_features_y, seqlen, normc_x, normc_y)
 	#exit()
 	enc_features = rnn_model.get_encoded_features(Sx, Sy, seqlen)
 	temp = []
@@ -186,6 +183,7 @@ def method4(R, Sx, Sy, X, Y, S, normc_x, normc_y):
 			#if z>=0:
 			#[x,y] = [f_x(z), f_y(z)]
 			[row,col] = INPUT.coord2pixel(raster_ds, X[i][j], Y[i][j])
+			#[row,col] = [int(X[i][j]*R.shape[1]), int(X[i][j]*R.shape[2])]
 			#if(row>=0 and row<R.shape[1] and col>=0 and col<R.shape[2]):
 			H[row%R.shape[1]][col%R.shape[2]] = 1
 				
@@ -250,9 +248,9 @@ if __name__=="__main__":
 	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
 	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/mumbai/'
 	
-	R = INPUT.give_raster(raw_loc + '2001.tif')
-	Bt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
-	Btnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
+	R = INPUT.give_raster(raw_loc + '1991.tif')
+	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
+	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
 	Rx = np.load('./dataset/Road_trX.npy')
 	
 	#X, seqlen, index_array = method(Rx)
@@ -284,11 +282,19 @@ if __name__=="__main__":
 	X = X.reshape([X.shape[0],X.shape[1],1])
 	Y = Y.reshape([Y.shape[0],Y.shape[1],1])
 	
-	normc_x = [np.min(np.ndarray.flatten(X)), np.max(np.ndarray.flatten(X))] 
-	normc_y = [np.min(np.ndarray.flatten(Y)), np.max(np.ndarray.flatten(Y))] 
+	temp = np.ndarray.flatten(X)
+	normc_x = [np.min(temp[temp>0]), np.max(temp)] 
+	temp = np.ndarray.flatten(Y)
+	normc_y = [np.min(temp[temp>0]), np.max(temp)] 
 	
-	X = (X - np.min(np.ndarray.flatten(X)))/(np.max(np.ndarray.flatten(X)) + np.min(np.ndarray.flatten(X)))
-	Y = (Y - np.min(np.ndarray.flatten(Y)))/(np.max(np.ndarray.flatten(Y)) + np.min(np.ndarray.flatten(Y)))
+	X = (X - normc_x[0])/(normc_x[1] - normc_x[0])
+	Y = (Y - normc_y[0])/(normc_y[1] - normc_y[0])
+	
+	X[X<0] = 0
+	Y[Y<0] = 0
+	
+	print normc_x
+	print normc_y
 	
 	nfeature_arr = [1,2,3,4,5]
 	n_steps_arr = [10,20,30,40]
@@ -328,6 +334,7 @@ if __name__=="__main__":
 	
 			accuracies = compute_metrics(R,Bt,Btnxt,P)
 			
+			print accuracies
 			fp.write('Figure of merit: '+str(accuracies[0]) + '\n')
 			fp.write('Producer accuracy '+str(accuracies[1]) + '\n')
 			fp.write('User accuracy: '+str(accuracies[2]) + '\n')
