@@ -1,1 +1,3 @@
-# Rule Based End to End framework for prediction of Urban Growth
+# End-to-End framrwork for Urban growth prediction
+
+Urban growth prediction
