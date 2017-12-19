@@ -178,11 +178,13 @@ def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 		np.save('./dataset/DCAP_V.npy',V)
 		np.save('./dataset/DCAP_B.npy',B)
 	else:
-		trX = np.load('./dataset/DCAP_trX.npy')
+		#trX = np.load('./dataset/DCAP_trX.npy')
+		trX = np.load('./dataset/CAD3_trX.npy')
 		trY = np.load('./dataset/DCAP_trY.npy')
 		teX = np.load('./dataset/DCAP_teX.npy')
 		teY = np.load('./dataset/DCAP_teY.npy')
-		V = np.load('./dataset/DCAP_V.npy')
+		#V = np.load('./dataset/DCAP_V.npy')
+		V = np.load('./dataset/CAD3_trX.npy')
 		B = np.load('./dataset/DCAP_B.npy')
 	
 	print 'Dimension of input : ', trX.shape
@@ -257,7 +259,7 @@ if __name__ == "__main__":
 	if(len(sys.argv)>=2):
 		pfname=sys.argv[1]
 	
-	run(R,Bt,Btnxt,Btnxtnxt,plot_fname=pfname, generate = True)
+	run(R,Bt,Btnxt,Btnxtnxt,plot_fname=pfname, generate = False)
 	
 	
 	

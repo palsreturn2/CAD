@@ -110,13 +110,13 @@ class DynamicRNNAE:
 		Y_part = Y[S>=10]
 		S_part = S[S>=10]
 		
-		for i in range(0,500):
-			self.sess.run(self.optimizer_x, feed_dict = {self.x: X_part, self.seqlen: S_part})
-			self.sess.run(self.optimizer_y, feed_dict = {self.y: Y_part, self.seqlen: S_part})
-			if(i%100==0):
-				e = self.sess.run(self.cost, feed_dict = {self.x: X, self.y: Y, self.seqlen: S})
-				print e 
-				mse.append(e)
+		#for i in range(0,500):
+		#	self.sess.run(self.optimizer_x, feed_dict = {self.x: X_part, self.seqlen: S_part})
+		#	self.sess.run(self.optimizer_y, feed_dict = {self.y: Y_part, self.seqlen: S_part})
+		#	if(i%100==0):
+		#		e = self.sess.run(self.cost, feed_dict = {self.x: X, self.y: Y, self.seqlen: S})
+		#		print e 
+		#		mse.append(e)
 		
 		for i in range(0,self.training_steps):
 			for j in range(0,X.shape[0], self.batch_size):

@@ -1,6 +1,8 @@
 import numpy as np
 import geninput as INPUT
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib import colors
 from sklearn.decomposition import PCA
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVC
@@ -59,8 +61,8 @@ def method_fit(trX,trY,B, model):
 	elif(model=="nb"):
 		model = GaussianNB()
 	
-	scores = cross_val_score(model,trX,trY,cv=2)
-	print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
+	#scores = cross_val_score(model,trX,trY,cv=2)
+	#print("Accuracy: %f (+/- %f)" % (scores.mean(), scores.std() * 2))
 	
 	#print model
 	start = time.time()
@@ -143,11 +145,11 @@ def method3(R, Sx, Sy, seqlen, trX, trY, index_array, normc_x, normc_y, feature_
 	mse = rnn_model.run_dynamic_rnn(Sx, Sy, seqlen)
 	end = time.time()
 	
-	#dec_features_x, dec_features_y = rnn_model.get_decoded_features(Sx, Sy, seqlen)
+	dec_features_x, dec_features_y = rnn_model.get_decoded_features(Sx, Sy, seqlen)
 	
 	#print zip(Sx[0], dec_features_x[0])
 	
-	#method4(R, Sx, Sy, dec_features_x, dec_features_y, seqlen, normc_x, normc_y)
+	#method4(R, Sx, Sy, Sx, Sy, seqlen, normc_x, normc_y)
 	#exit()
 	enc_features = rnn_model.get_encoded_features(Sx, Sy, seqlen)
 	temp = []
@@ -223,6 +225,7 @@ def method5(Rx, res=1):
 
 def compute_metrics(R, Bt, Btnxt, P):
 	shp = R.shape
+	print np.unique(P)
 	C=np.zeros((shp[1],shp[2]))
 	M = np.zeros((shp[1],shp[2]))
 	k=0
@@ -238,8 +241,21 @@ def compute_metrics(R, Bt, Btnxt, P):
 					M[i][j]=3
 				k=k+1
 	
-	C = np.asarray(C>0,dtype = np.int32)
+	
+	
+	fig, ax = plt.subplots()
+	cmap = colors.ListedColormap(['white', 'red', 'blue'])	
+	heatmap = plt.imshow(np.transpose(C), cmap=cmap)
+	cbar = plt.colorbar(heatmap)
+	cbar.ax.get_yaxis().set_ticks([])
+	for j, lab in enumerate(['Non-Urban to Non-Urban', 'Non-Urban to Urban', 'Urban to Urban']):
+		cbar.ax.text(3, (2 * j + 1) / 6.0, lab, ha='left', va='center')
+	cbar.ax.get_yaxis().labelpad = 15
+	cbar.ax.set_yticklabels('Transition classes', rotation=270)
+	plt.autoscale(tight=True)
 
+	plt.savefig("viz_growth.png", bbox_inches="tight")
+	C = np.asarray(C>0,dtype = np.int32)
 	Btd = np.asarray(Bt>0,dtype = np.int32)
 	Btnxtd = np.asarray(Btnxt>0,dtype = np.int32)
 	return metrics.change_metric(R,Btd,Btnxtd,C)
@@ -296,8 +312,8 @@ if __name__=="__main__":
 	print normc_x
 	print normc_y
 	
-	nfeature_arr = [1,2,3,4,5]
-	n_steps_arr = [10,20,30,40]
+	nfeature_arr = [5]
+	n_steps_arr = [10]
 	
 	c = 0
 	
