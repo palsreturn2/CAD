@@ -1,9 +1,11 @@
 from keras.layers import Dense, Input
 from keras.models import Model
 import numpy as np
+import tensorflow as tf
 
 class Autoencoder:
 	def __init__(self, input_dim, enc_dim = 3):
+		#tf.reset_default_graph()
 		self.encode_dim = enc_dim
 		I = Input(shape=(input_dim,))
 		
@@ -17,10 +19,10 @@ class Autoencoder:
 		decoder_layer = self.autoencoder.layers[-1]
 		self.decoder = Model(encoded_input, decoder_layer(encoded_input))
 
-		self.autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
+		self.autoencoder.compile(optimizer='adadelta', loss='mean_squared_error')
 	
 	def train(self, X):
-		self.autoencoder.fit(X, X, epochs=50, batch_size=1000, shuffle=True)
+		self.autoencoder.fit(X, X, epochs=10, batch_size=1000, shuffle=True)
 	
 	def encode(self, X):
 		return self.encoder.predict(X)
@@ -36,7 +38,7 @@ if __name__=='__main__':
 	ae.train(Xi)
 	Ex = ae.encode(Xi)
 	
-	E = np.concatenate([X[:,0:9],Ex], axis=1)
+	E = np.concatenate([X[:,27:36],Ex], axis=1)
 	
 	np.save('./dataset/CAD3_trX.npy', E)
 	

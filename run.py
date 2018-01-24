@@ -19,6 +19,7 @@ from sklearn.linear_model import SGDRegressor
 from sklearn.svm import SVR
 import method1 as METHOD
 import time
+from autoencoder import Autoencoder
 
 def viz_layer1(R,V):
 	shp = R.shape
@@ -64,7 +65,7 @@ def urbangrowth_predict(R,V,Bt,model):
 				X.append(x)
 	X = np.array(X)
 	X = X.reshape([-1,9])
-	V = np.concatenate([V[:,0:27],X],axis=1)
+	V = np.concatenate([V[:,0:10],X],axis=1)
 	P = model.predict(V)
 	C = np.zeros((shp[0],shp[1]))
 	k=0
@@ -83,7 +84,7 @@ def merge(R, C):
 			if(C[i][j]>0):
 				M[0][i][j] = 255
 				M[1][i][j] = 255
-				M[2][i][j] = 255
+				M[2][i][j] = 255			
 			else:
 				M[0][i][j] = R[0][i][j]
 				M[1][i][j] = R[1][i][j]
@@ -94,11 +95,12 @@ def urbangrowth_predictn(R,V,Bt,model,n=4):
 	C = []
 	shp = R.shape
 	S = np.zeros((shp[1],shp[2]))
+	Btd = Bt
 	for i in range(0,n):
 		print 'Time step ',i
 		C = urbangrowth_predict(R,V,Bt,model)
 		Bt = np.asarray(C>0,dtype = np.int32)
-		scipy.misc.imsave('pred'+str(i)+'.png', np.transpose(merge(R,C)))
+		scipy.misc.imsave('pred'+str(i)+'.png', np.transpose(merge(R, C)))
 		S = S+Bt
 		Bt[C==0] = -1
 	
@@ -161,13 +163,15 @@ def classify(R,V,Bt,Btnxt,model, plot_fname=None):
 
 	Btd = np.asarray(Bt>0,dtype = np.int32)
 	Btnxtd = np.asarray(Btnxt>0,dtype = np.int32)
-	print metrics.change_metric(R,Btd,Btnxtd,C)
-	return Btnxtd
+	performance = metrics.change_metric(R,Btd,Btnxtd,C)
+	return Btnxtd, performance
 
-def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
+def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False, encode_dim = 3):
 	wx=3
 	wy=3
 	shp=R.shape
+
+	
 	print 'Training set generation started'	
 	if generate:
 		trX, trY, teX, teY, V, B = DATASET.cad_dataset(R,Bt,Btnxt,wx,wy)
@@ -178,13 +182,11 @@ def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 		np.save('./dataset/DCAP_V.npy',V)
 		np.save('./dataset/DCAP_B.npy',B)
 	else:
-		#trX = np.load('./dataset/DCAP_trX.npy')
-		trX = np.load('./dataset/CAD3_trX.npy')
+		trX = np.load('./dataset/DCAP_trX.npy')
 		trY = np.load('./dataset/DCAP_trY.npy')
 		teX = np.load('./dataset/DCAP_teX.npy')
 		teY = np.load('./dataset/DCAP_teY.npy')
-		#V = np.load('./dataset/DCAP_V.npy')
-		V = np.load('./dataset/CAD3_trX.npy')
+		V = np.load('./dataset/DCAP_V.npy')
 		B = np.load('./dataset/DCAP_B.npy')
 	
 	print 'Dimension of input : ', trX.shape
@@ -207,19 +209,41 @@ def run(R,Bt,Btnxt,Btnxtnxt, plot_fname, generate = False):
 	trX = trX.reshape([trX.shape[0],-1])
 	V = V.reshape([V.shape[0],-1])
 	
-	#model = SGDRegressor()
-	#model.fit(trX,trY)
-	#MLP.fit(trX,trY, B, epoch = 50, batch_size = 1000, early_stop=True,epsilon = 0.010)
+	ae = Autoencoder(input_dim = trX.shape[1]-(wx*wy), enc_dim = encode_dim)
+	
+	print "Encoder Generation"
+	fp = open('log.txt', 'a')
+	
+	fp.write("************************************\n");
+	fp.write("Encoding Dimension = "+str(encode_dim)+"\n");
+	
+	start = time.time()	
+	ae.train(trX[:,0:-(wx*wy)])
+	fp.write("Encoding Training Time = "+str(time.time()-start)+"\n")
+	
+	start = time.time()	
+	Ex = ae.encode(trX[:,0:-(wx*wy)])
+	fp.write("Encoding Time = "+str(time.time()-start)+"\n")
+	
+	trX = np.concatenate([Ex, trX[:,trX.shape[1]-(wx*wy):]], axis = 1)
+	V = np.concatenate([Ex, trX[:,trX.shape[1]-(wx*wy):]], axis = 1)
+	print "Encoding Done"
 	#models = ['dt','sgd','rf','mlp','ada','nb']
 	models = ['rf']
+	
 	for m in models:
 		model = METHOD.method_fit(trX,trY,B,m)
-		classify(R,V,Bt,Btnxt,model,plot_fname)
+		L, accuracies = classify(R,V,Bt,Btnxt,model,plot_fname)
+		
+		fp.write('Figure of merit: '+str(accuracies[0]) + '\n')
+		fp.write('Producer accuracy '+str(accuracies[1]) + '\n')
+		fp.write('User accuracy: '+str(accuracies[2]) + '\n')
+		fp.write('Overall accuracy: '+str(accuracies[3]) + '\n')
 	#classify(R,V,Bt,Btnxt,None,plot_fname)
 	#urbangrowth_predictn(R,V,Bt,model,n=5)
 	#exit()
 	
-	
+	fp.close()
 	
 	#V = DATASET.create_test_dataset(R,Btnxt,Btnxtnxt)
 	#V = V.reshape([-1,36])
@@ -230,7 +254,7 @@ if __name__ == "__main__":
 	raw_loc='/home/ubuntu/workplace/saptarshi/Data/raw/mumbai/'
 	label_loc='/home/ubuntu/workplace/saptarshi/Data/labelled/mumbai/'
 	
-	R = INPUT.give_raster(raw_loc + '1991.tif')
+	R = INPUT.give_raster(raw_loc + '2001.tif')
 	Bt = INPUT.give_raster(label_loc + 'cimg1991.tif')[0]
 	Btnxt = INPUT.give_raster(label_loc + 'cimg2001.tif')[0]
 	Btnxtnxt = INPUT.give_raster(label_loc + 'cimg2011.tif')[0]
@@ -259,7 +283,10 @@ if __name__ == "__main__":
 	if(len(sys.argv)>=2):
 		pfname=sys.argv[1]
 	
-	run(R,Bt,Btnxt,Btnxtnxt,plot_fname=pfname, generate = False)
+	edim = [5,10,15,20]
+	
+	for ed in edim:
+		run(R,Btnxt,Btnxtnxt,Btnxtnxt,plot_fname=pfname, generate = True, encode_dim = ed)
 	
 	
 	

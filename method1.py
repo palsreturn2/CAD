@@ -241,8 +241,6 @@ def compute_metrics(R, Bt, Btnxt, P):
 					M[i][j]=3
 				k=k+1
 	
-	
-	
 	fig, ax = plt.subplots()
 	cmap = colors.ListedColormap(['white', 'red', 'blue'])	
 	heatmap = plt.imshow(np.transpose(C), cmap=cmap)
